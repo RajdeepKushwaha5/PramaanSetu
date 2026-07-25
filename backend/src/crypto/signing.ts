@@ -10,10 +10,16 @@ import {
   createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
+  randomBytes,
   sign as edSign,
   verify as edVerify,
 } from "node:crypto";
 import type { Manifest } from "../db/types.js";
+
+/** A secret bearer token that authorises signing as a specific issuer. */
+export function generateApiKey(): string {
+  return `psk_${randomBytes(24).toString("hex")}`;
+}
 
 export interface KeyPairB64 {
   publicKey: string; // base64 DER (SPKI)
@@ -53,6 +59,16 @@ export function signManifest(manifest: Manifest, privateKeyB64: string): string 
   });
   const data = Buffer.from(canonicalize(manifest), "utf8");
   return edSign(null, data, key).toString("base64");
+}
+
+/** Sign any JSON-serialisable value (used for evidence-pack integrity). */
+export function signJson(value: unknown, privateKeyB64: string): string {
+  const key = createPrivateKey({
+    key: Buffer.from(privateKeyB64, "base64"),
+    format: "der",
+    type: "pkcs8",
+  });
+  return edSign(null, Buffer.from(canonicalize(value), "utf8"), key).toString("base64");
 }
 
 export function verifyManifest(

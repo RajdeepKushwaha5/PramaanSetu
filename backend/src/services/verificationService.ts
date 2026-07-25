@@ -144,7 +144,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
   const exact = store.getAssetByContentHash(contentHash);
   if (exact) {
     const { verdict, sigValid, message } = resolveGenuineVerdict(exact, true);
-    record(verdict, mediaType, exact);
+    record({ verdict, mediaType, contentHash, asset: exact });
     return {
       verdict,
       mediaType,
@@ -165,46 +165,71 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
         if (!best || d < best.dist) best = { asset, dist: d };
       }
 
-      // Payment-tamper check: if the suspect resembles a signed document, decode
-      // its QR and confirm the payee is still an approved handle. This catches a
-      // swapped payment QR even when the image looks pixel-identical.
-      if (best && best.dist <= ALTERED_MAX_CELLS && mediaType === "image" && contentBuf) {
-        const qrText = await decodeQr(contentBuf);
-        const payee = qrText ? extractUpiPayee(qrText) : null;
-        const approved = best.asset.manifest.approvedPaymentHandles;
-        if (payee && approved.length > 0 && !approved.includes(payee)) {
-          record("altered", mediaType, best.asset);
+      if (best && best.dist <= ALTERED_MAX_CELLS) {
+        const issuerName = best.asset.manifest.issuer.name;
+
+        // If the matched registry record's OWN signature does not validate, the
+        // whole thing is untrustworthy regardless of visual similarity.
+        const issuer = store.getIssuer(best.asset.issuerId);
+        const originalSigValid = issuer
+          ? verifyManifest(best.asset.manifest, best.asset.signature, issuer.publicKey)
+          : false;
+        if (!originalSigValid) {
+          record({ verdict: "invalid_provenance", mediaType, contentHash, asset: best.asset });
           return {
-            verdict: "altered",
+            verdict: "invalid_provenance",
             mediaType,
-            match: {
-              ...publicMatch(best.asset, best.dist, false),
-              differences: [
-                `Payment address in the QR code is "${payee}", which is NOT an approved handle for ${best.asset.manifest.issuer.name}.`,
-                `Approved handle(s): ${approved.join(", ")}. This is payment redirection — do not pay.`,
-              ],
-              paymentTamper: { foundPayee: payee, approvedPayees: approved },
-            },
-            message: `WARNING: This looks like a ${best.asset.manifest.issuer.name} communication but its payment QR was SWAPPED to "${payee}". Do not pay.`,
+            match: publicMatch(best.asset, best.dist, false),
+            message: `This resembles a ${issuerName} communication, but the underlying registry record's signature does not validate. Do not trust it.`,
             contentHash,
           };
         }
-      }
 
-      if (best && best.dist <= DERIVATIVE_MAX_CELLS) {
-        const { verdict, sigValid, message } = resolveGenuineVerdict(best.asset, false);
-        record(verdict, mediaType, best.asset);
-        return {
-          verdict,
-          mediaType,
-          match: publicMatch(best.asset, best.dist, sigValid),
-          message,
-          contentHash,
-        };
-      }
+        // Payment-tamper check: decode the QR and confirm the payee is still an
+        // approved handle — catches a swapped payment QR even when pixels match.
+        if (mediaType === "image" && contentBuf) {
+          const qrText = await decodeQr(contentBuf);
+          const payee = qrText ? extractUpiPayee(qrText) : null;
+          const approved = best.asset.manifest.approvedPaymentHandles;
+          if (payee && approved.length > 0 && !approved.includes(payee)) {
+            record({
+              verdict: "altered",
+              mediaType,
+              contentHash,
+              asset: best.asset,
+              paymentHandles: [payee],
+              tamperType: "payment_qr_swap",
+            });
+            return {
+              verdict: "altered",
+              mediaType,
+              match: {
+                ...publicMatch(best.asset, best.dist, originalSigValid),
+                differences: [
+                  `Payment address in the QR code is "${payee}", which is NOT an approved handle for ${issuerName}.`,
+                  `Approved handle(s): ${approved.join(", ")}. This is payment redirection — do not pay.`,
+                ],
+                paymentTamper: { foundPayee: payee, approvedPayees: approved },
+              },
+              message: `WARNING: This looks like a ${issuerName} communication but its payment QR was SWAPPED to "${payee}". Do not pay.`,
+              contentHash,
+            };
+          }
+        }
 
-      if (best && best.dist <= ALTERED_MAX_CELLS) {
-        // Localise the tampered region (image only).
+        if (best.dist <= DERIVATIVE_MAX_CELLS) {
+          const { verdict, sigValid, message } = resolveGenuineVerdict(best.asset, false);
+          record({ verdict, mediaType, contentHash, asset: best.asset });
+          return {
+            verdict,
+            mediaType,
+            match: publicMatch(best.asset, best.dist, sigValid),
+            message,
+            contentHash,
+          };
+        }
+
+        // Visual edit within the altered band. Localise the tampered region.
         let tamperMap: TamperMap | undefined;
         if (mediaType === "image") {
           const probeFp = probe[0];
@@ -214,19 +239,25 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
           const { grid, cells, changed } = cellDiffGrid(probeFp, originalFp);
           tamperMap = { grid, changedCells: changed, cells };
         }
-        record("altered", mediaType, best.asset);
+        record({
+          verdict: "altered",
+          mediaType,
+          contentHash,
+          asset: best.asset,
+          tamperType: "visual_edit",
+        });
         return {
           verdict: "altered",
           mediaType,
           match: {
-            ...publicMatch(best.asset, best.dist, false),
+            ...publicMatch(best.asset, best.dist, originalSigValid),
             differences: [
               "Content closely matches a genuine signed communication but has been modified.",
               "The highlighted region differs from the original (e.g. a swapped payment QR, edited figure, or removed disclaimer).",
             ],
             tamperMap,
           },
-          message: `WARNING: This closely resembles a genuine ${best.asset.manifest.issuer.name} communication but has been ALTERED. Do not pay or act on it. Check the official source.`,
+          message: `WARNING: This closely resembles a genuine ${issuerName} communication but has been ALTERED. Do not pay or act on it. Check the official source.`,
           contentHash,
         };
       }
@@ -274,12 +305,14 @@ async function unverified(
   getStore().addEvent({
     verdict: "unverified",
     mediaType,
+    contentHash,
     matchedAssetId: null,
     matchedIssuerName: null,
     impersonatedEntity: impersonated,
     paymentHandles: handles,
     phoneNumbers: phones,
     urls,
+    tamperType: null,
     riskLevel,
     riskScore,
   });
@@ -294,17 +327,31 @@ async function unverified(
   };
 }
 
-function record(verdict: Verdict, mediaType: MediaType, asset: SignedAsset | null): void {
-  const isFraud = verdict === "altered" || verdict === "invalid_provenance";
+interface RecordOpts {
+  verdict: Verdict;
+  mediaType: MediaType;
+  contentHash: string;
+  asset?: SignedAsset | null;
+  paymentHandles?: string[];
+  phoneNumbers?: string[];
+  urls?: string[];
+  tamperType?: string | null;
+}
+
+function record(o: RecordOpts): void {
+  const isFraud = o.verdict === "altered" || o.verdict === "invalid_provenance";
   getStore().addEvent({
-    verdict,
-    mediaType,
-    matchedAssetId: asset?.id ?? null,
-    matchedIssuerName: asset?.manifest.issuer.name ?? null,
-    impersonatedEntity: isFraud ? asset?.manifest.issuer.name ?? null : null,
-    paymentHandles: [],
-    phoneNumbers: [],
-    urls: [],
+    verdict: o.verdict,
+    mediaType: o.mediaType,
+    contentHash: o.contentHash,
+    matchedAssetId: o.asset?.id ?? null,
+    matchedIssuerName: o.asset?.manifest.issuer.name ?? null,
+    // For tampering/impersonation, the impersonated entity is the matched issuer.
+    impersonatedEntity: isFraud ? o.asset?.manifest.issuer.name ?? null : null,
+    paymentHandles: o.paymentHandles ?? [],
+    phoneNumbers: o.phoneNumbers ?? [],
+    urls: o.urls ?? [],
+    tamperType: o.tamperType ?? null,
     riskLevel: null,
     riskScore: null,
   });

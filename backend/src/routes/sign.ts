@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { signContent } from "../services/signingService.js";
 import { resolveMime } from "../util/media.js";
+import { getStore } from "../db/store.js";
+import { env } from "../config/env.js";
 
 export const signRouter = Router();
 
@@ -26,6 +28,30 @@ signRouter.post("/", async (req, res) => {
   if (!content && !text) {
     res.status(400).json({ error: "Provide 'content' (base64) or 'text'." });
     return;
+  }
+
+  // ---- Authorisation: signing must be bound to the issuer identity ----
+  const issuer = getStore().getIssuer(issuerId);
+  if (!issuer) {
+    res.status(404).json({ error: "Unknown issuer." });
+    return;
+  }
+  const providedKey = req.header("x-issuer-key");
+  if (providedKey) {
+    // A key was supplied — it MUST belong to this exact issuer.
+    if (providedKey !== issuer.apiKey) {
+      res.status(401).json({ error: "Invalid issuer key for this issuer." });
+      return;
+    }
+  } else {
+    // No key: only pre-approved demo issuers may sign keyless, and only in demo
+    // mode. This closes the "anyone can sign as SEBI" hole in production.
+    if (!(env.demoMode && issuer.demoIssuer)) {
+      res.status(401).json({
+        error: "Signing requires the issuer's key (x-issuer-key header).",
+      });
+      return;
+    }
   }
 
   try {

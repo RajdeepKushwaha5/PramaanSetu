@@ -45,6 +45,13 @@ export const env = {
   // Gates issuer creation. If unset, public issuer creation is disabled.
   adminApiKey: process.env.ADMIN_API_KEY?.trim() || "",
   nodeEnv: process.env.NODE_ENV || "development",
+  // Demo mode allows frictionless keyless signing for pre-approved demo issuers
+  // and open seeding. Enabled outside production, or via DEMO_MODE=1. In
+  // production, signing always requires an issuer key.
+  demoMode:
+    process.env.DEMO_MODE === "1" ||
+    process.env.DEMO_MODE === "true" ||
+    (process.env.NODE_ENV || "development") !== "production",
 };
 
 export function assertGeminiConfigured(): void {

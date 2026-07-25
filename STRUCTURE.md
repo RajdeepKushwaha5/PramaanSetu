@@ -8,28 +8,28 @@ pramaansetu/
 │   ├── src/app/
 │   │   ├── page.tsx          Landing page
 │   │   ├── verify/page.tsx   Investor verifier UI      (Layer 2)
-│   │   ├── issuer/page.tsx   Issuer signing UI         (Layer 1)  [todo]
-│   │   └── dashboard/page.tsx SupTech radar UI         (Layer 3)  [todo]
+│   │   ├── issuer/page.tsx   Issuer signing UI         (Layer 1)
+│   │   └── dashboard/page.tsx SupTech radar UI         (Layer 3)
+│   ├── src/components/app-shell.tsx  Shared nav shell
 │   ├── src/lib/api.ts        Backend base URL helper
 │   └── .env.local            NEXT_PUBLIC_API_URL -> backend
 │
 ├── backend/                  Express + TypeScript API
 │   ├── src/
-│   │   ├── index.ts          Server entry (CORS, JSON, routers)
-│   │   ├── config/env.ts     Env + Gemini key list
-│   │   ├── ai/
-│   │   │   ├── geminiKeyManager.ts   Rolling free-tier key pool
-│   │   │   ├── geminiClient.ts       Gemini wrapper (retry + rotate)
-│   │   │   └── riskEngine.ts         Phishing / impersonation analysis
-│   │   ├── crypto/           C2PA signing + hash-chain log (Layer 1)  [todo]
-│   │   ├── fingerprint/      Perceptual hashing, FFmpeg (Layer 2)     [todo]
-│   │   ├── db/               Registry + events store                  [todo]
-│   │   └── routes/
-│   │       ├── health.ts     GET /api/health  (key-pool status)
-│   │       └── risk.ts       POST /api/risk   (AI risk engine)
-│   └── .env                  Gemini keys, PORT, CORS_ORIGIN
+│   │   ├── index.ts          Server entry (Helmet, CORS, rate limit, routers)
+│   │   ├── config/env.ts     Env, Gemini keys, admin key, demo mode
+│   │   ├── ai/               Gemini key pool, client, risk engine
+│   │   ├── crypto/signing.ts Ed25519 signing + api-key + evidence signing
+│   │   ├── fingerprint/      Content hash, colour block hash, video, QR decode
+│   │   ├── db/               JSON store: registry, hash-chain log, events
+│   │   ├── services/         signing, verification, campaign, evidence, demo assets
+│   │   ├── util/media.ts     Magic-byte MIME validation
+│   │   └── routes/           health, sign, verify, issuers, seed, campaigns, risk
+│   ├── scripts/benchmark.mjs Synthetic verification benchmark
+│   ├── tests/                node:test verification-semantics tests
+│   └── .env                  Gemini keys, PORT, CORS_ORIGIN, ADMIN_API_KEY
 │
-└── package.json              Root scripts to run both together
+└── package.json              Root scripts (dev / typecheck / benchmark)
 ```
 
 ## Run both (from repo root)

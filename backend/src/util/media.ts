@@ -10,6 +10,11 @@ const ALLOWED = new Set([
   "video/mp4",
   "video/quicktime",
   "video/webm",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/ogg",
   "application/pdf",
 ]);
 

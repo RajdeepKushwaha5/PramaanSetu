@@ -31,6 +31,8 @@ export interface Issuer {
   entityClass: EntityClass;
   publicKey: string; // base64 SPKI (Ed25519)
   privateKey: string; // base64 PKCS8 — PROTOTYPE ONLY (prod: HSM/KMS)
+  apiKey: string; // secret bearer token that authorises signing as this issuer
+  demoIssuer: boolean; // pre-approved demo identity (keyless signing allowed in demo mode)
   validUpiHandles: string[];
   trustLevel: TrustLevel;
   registrationSource: string | null; // URL of the SEBI-registration record
@@ -89,13 +91,15 @@ export interface VerificationEvent {
   timestamp: string;
   verdict: Verdict;
   mediaType: MediaType;
+  contentHash: string | null; // SHA-256 of the submitted content
   matchedAssetId: string | null;
   matchedIssuerName: string | null;
-  // Fraud-clustering fields (populated for altered / unverified):
+  // Fraud-clustering fields (populated for altered / invalid / unverified):
   impersonatedEntity: string | null;
   paymentHandles: string[];
   phoneNumbers: string[];
   urls: string[];
+  tamperType: string | null; // e.g. "payment_qr_swap"
   riskLevel: string | null;
   riskScore: number | null;
 }
@@ -105,4 +109,6 @@ export interface DbShape {
   assets: SignedAsset[];
   log: LogEntry[];
   events: VerificationEvent[];
+  // Ed25519 keypair used to sign exported evidence packs (integrity).
+  evidenceKey?: { publicKey: string; privateKey: string };
 }

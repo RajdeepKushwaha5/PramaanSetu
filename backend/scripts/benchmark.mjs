@@ -58,7 +58,8 @@ const store = getStore();
 const kp = generateIssuerKeys();
 const issuer = store.addIssuer({
   name: "Benchmark Issuer", sebiRegNo: "BENCH-001", entityClass: "sebi",
-  validUpiHandles: [APPROVED], trustLevel: "validated", registrationSource: "https://example.gov",
+  validUpiHandles: [APPROVED], trustLevel: "demo", demoIssuer: true,
+  registrationSource: "https://example.gov", apiKey: "bench",
   publicKey: kp.publicKey, privateKey: kp.privateKey,
 });
 
@@ -100,7 +101,10 @@ lat.sort((a, b) => a - b);
 const pct = (p) => lat[Math.min(lat.length - 1, Math.floor((p / 100) * lat.length))].toFixed(1);
 const rate = (a, b) => `${((a / b) * 100).toFixed(1)}% (${a}/${b})`;
 
-console.log("\n=== PramaanSetu Verification Benchmark ===");
+console.log("\n=== PramaanSetu SYNTHETIC PROTOTYPE Benchmark ===");
+console.log("NOTE: synthetic templates + Jimp-generated recompression only. Not a general");
+console.log("accuracy claim. Real forwarded media (WhatsApp/Telegram), PDFs, video, crops,");
+console.log("rotations and adversarial edits are future work.");
 console.log(`Dataset: ${N} originals, ${derivTot} derivatives, ${alterTot} altered (QR-swap + visual edit), ${unrelTot} unrelated`);
 console.log(`Method: SHA-256 + Ed25519 provenance; 32x32 colour block grid (derivative<=4, altered<=300 cells); QR payee check`);
 console.log(`AI risk engine: disabled for reproducibility (deterministic layer only)\n`);

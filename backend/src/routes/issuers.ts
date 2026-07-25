@@ -2,16 +2,17 @@ import { Router } from "express";
 import { z } from "zod";
 import { getStore } from "../db/store.js";
 import type { EntityClass, Issuer } from "../db/types.js";
-import { generateIssuerKeys } from "../crypto/signing.js";
+import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
 import { env } from "../config/env.js";
 
 export const issuersRouter = Router();
 
-/** Never expose private keys. */
+/** Never expose private keys or the signing API key. */
 function publicIssuer(i: Issuer) {
-  const { privateKey, publicKey, ...rest } = i;
+  const { privateKey, publicKey, apiKey, ...rest } = i;
   void privateKey;
   void publicKey;
+  void apiKey;
   return rest;
 }
 
@@ -59,15 +60,19 @@ issuersRouter.post("/", (req, res) => {
     return;
   }
   const keys = generateIssuerKeys();
+  const apiKey = generateApiKey();
   const issuer = getStore().addIssuer({
     name: parsed.data.name,
     sebiRegNo: parsed.data.sebiRegNo,
     entityClass: parsed.data.entityClass as EntityClass,
     validUpiHandles: parsed.data.validUpiHandles,
     trustLevel: "demo",
+    demoIssuer: false, // ad-hoc issuers must authenticate signing with their key
     registrationSource: null,
+    apiKey,
     publicKey: keys.publicKey,
     privateKey: keys.privateKey,
   });
-  res.status(201).json(publicIssuer(issuer));
+  // Return the signing key ONCE, to the admin who created it.
+  res.status(201).json({ ...publicIssuer(issuer), apiKey });
 });

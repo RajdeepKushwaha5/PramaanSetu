@@ -23,7 +23,8 @@ See [STRUCTURE.md](./STRUCTURE.md) for the full breakdown.
 ## The three layers
 
 1. **Signing rail** (backend) — SEBI, exchanges and companies sign official
-   communications with C2PA credentials tied to their SEBI registration.
+   communications with an Ed25519-signed, C2PA-inspired provenance manifest
+   tied to their SEBI registration (full C2PA conformance is on the roadmap).
 2. **Investor verifier** (frontend + backend) — forward any suspicious video,
    PDF or message and get one of four verdicts: Verified Original, Verified
    Derivative, Altered, or Unverified + AI risk analysis.
@@ -76,20 +77,25 @@ Two independent services:
 - [x] Backend + frontend split, wired over HTTP with CORS + Helmet + rate limiting
 - [x] Gemini key pool: load distribution + automatic failover on bad/rate-limited keys
 - [x] **Layer 1** — Ed25519 signing over a C2PA-inspired manifest + hash-chain transparency log
-- [x] Issuer **trust root**: pre-provisioned validated issuers with registration sources;
-      public issuer creation gated behind an admin key; `demo` vs `validated` trust levels
+- [x] **Authenticated signing**: `/api/sign` requires an issuer-bound key; pre-approved
+      demo issuers may sign keyless only in demo mode (off in production); seeding is gated
+- [x] Issuer identities are **pre-approved demo identities** (real keys, not yet externally
+      validated against SEBI's registry) with registration-source links
 - [x] **Layer 2** — verification engine with verdicts: Original / Copy / Altered /
       **Invalid-signature** / Revoked / Expired / Unverified
 - [x] Signature-fail is never reported as genuine; revocation + expiry apply to copies too
 - [x] Colour block-average fingerprinting + **tamper heatmap** localising the edited region
-- [x] **QR payment-tamper detection**: decodes the QR and flags a swapped payee by name
+- [x] **QR payment-tamper detection**: decodes the QR, flags a swapped payee by name, and
+      feeds that payee into campaign clustering
 - [x] **Layer 3** — SupTech radar: connected-component campaign clustering by shared
-      indicators, severity tiers (confirmed / suspected / low), evidence-pack export
-- [x] Reproducible **benchmark** (`npm run benchmark`): 100% original/derivative/altered
-      recall, 0% false-match, ~32 ms median on the deterministic layer
-- [x] MIME validation from file magic bytes; tamper-evident log integrity checks
-- [ ] Audio perceptual fingerprinting (needs FFmpeg; exact-hash only today)
-- [ ] Real C2PA conformance via c2pa-rs; PostgreSQL + LSH; issuer keys in HSM/KMS
+      indicators, severity tiers (confirmed / suspected / low)
+- [x] **Signed evidence packs**: per-event hashes, matched asset, signature result, tamper
+      type, log reference, model version, and an Ed25519 integrity signature over the pack
+- [x] Automated tests (`npm test`) for the verification semantics and the auth fix
+- [x] MIME validation from file magic bytes (incl. audio); tamper-evident log integrity
+- [ ] Real forwarded-media benchmark, PDF page/QR verification, audio fingerprinting
+- [ ] Real C2PA conformance via c2pa-rs; PostgreSQL + LSH; issuer keys in HSM/KMS;
+      real SEBI-registration validation for issuer identities
 
 ## Demo flow (start with investor harm)
 
@@ -109,7 +115,7 @@ document verification work without it.
 ## Benchmark
 
 ```bash
-cd backend && npm run benchmark
+cd backend && npm run benchmark   # or: npm test  (verification-semantics tests)
 ```
 
 Runs an isolated, reproducible measurement of the deterministic verification
@@ -117,12 +123,22 @@ layer (AI disabled): original-verification rate, derivative recall after
 re-compression, altered recall (QR-swap + visual edit), false-match rate on
 unrelated images, and p50/p95 latency, with the exact thresholds printed.
 
+This is a **synthetic prototype benchmark** — Jimp-generated templates and
+re-compression, not real forwarded media. It is a regression check, not a
+general accuracy claim. Current run: 100% original/derivative/altered recall,
+0% false-match, latency in the tens of milliseconds (hardware-dependent). A
+real-media evaluation (WhatsApp/Telegram round-trips, public SEBI/exchange
+documents, crops/rotations/screenshots, confusion matrix, held-out calibration
+set) is future work.
+
 ## Security notes (prototype)
 
-Helmet security headers, per-IP rate limiting, content-derived MIME validation,
-admin-gated issuer creation, and no key-pool internals exposed on `/api/health`.
-For production: HSM/KMS-held issuer keys, issuer authentication, streaming
-uploads, and a SEBI-registration allowlist for issuer identities.
+Issuer-bound signing keys (`/api/sign` requires `x-issuer-key`; keyless signing
+only for pre-approved demo issuers in demo mode), admin-gated issuer creation and
+seeding, Helmet security headers, per-IP rate limiting, content-derived MIME
+validation, and no key-pool internals exposed on `/api/health`. Evidence exports
+are Ed25519-signed. For production: HSM/KMS-held issuer keys, per-issuer sessions,
+streaming uploads, and real SEBI-registration validation of issuer identities.
 
 ## Tech
 

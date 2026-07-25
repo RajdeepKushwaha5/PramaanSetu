@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { getStore } from "../db/store.js";
+import { env } from "../config/env.js";
 import type { EntityClass } from "../db/types.js";
-import { generateIssuerKeys } from "../crypto/signing.js";
+import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
 import { signContent } from "../services/signingService.js";
 import { makeDemoBundle } from "../services/demoAssets.js";
 
@@ -45,7 +46,13 @@ const SEED_ANNOUNCEMENTS = [
   },
 ];
 
-seedRouter.post("/", async (_req, res) => {
+seedRouter.post("/", async (req, res) => {
+  // Seeding mints signing identities, so it is gated: allowed in demo mode, or
+  // with the admin key. Disabled by default in production.
+  if (!env.demoMode && req.header("x-admin-key") !== env.adminApiKey) {
+    res.status(403).json({ error: "Seeding is disabled in production without the admin key." });
+    return;
+  }
   const store = getStore();
 
   // 1) Issuers (idempotent by SEBI reg no).
@@ -57,8 +64,12 @@ seedRouter.post("/", async (_req, res) => {
         sebiRegNo: s.sebiRegNo,
         entityClass: s.entityClass,
         validUpiHandles: s.validUpiHandles,
-        trustLevel: "validated",
+        // Pre-approved demo identities: real key material, but identity is not
+        // externally validated against SEBI's registry yet.
+        trustLevel: "demo",
+        demoIssuer: true,
         registrationSource: s.registrationSource,
+        apiKey: generateApiKey(),
         publicKey: keys.publicKey,
         privateKey: keys.privateKey,
       });

@@ -7,7 +7,7 @@
  * without touching callers.
  */
 
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, generateKeyPairSync, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -189,6 +189,19 @@ class Store {
 
   listEvents(): VerificationEvent[] {
     return this.db.events;
+  }
+
+  /** Ed25519 keypair for signing exported evidence packs (created on first use). */
+  getEvidenceKeyPair(): { publicKey: string; privateKey: string } {
+    if (!this.db.evidenceKey) {
+      const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+      this.db.evidenceKey = {
+        publicKey: publicKey.export({ type: "spki", format: "der" }).toString("base64"),
+        privateKey: privateKey.export({ type: "pkcs8", format: "der" }).toString("base64"),
+      };
+      this.flush();
+    }
+    return this.db.evidenceKey;
   }
 
   stats() {
