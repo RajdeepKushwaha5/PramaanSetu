@@ -60,14 +60,19 @@ export default function Home() {
         <div className="hero-visual">
           <div className="panel architecture-panel">
             <div className="panel-header">
-              <span><strong>trust topology</strong> / live model</span>
+              <span><strong>trust flow</strong> / deterministic path</span>
               <div className="panel-dots"><i /><i /><i /></div>
             </div>
             <TrustTopology />
+            <div className="architecture-legend">
+              <span><i className="blue" /> signed provenance</span>
+              <span><i className="orange" /> investor decision</span>
+              <span><i /> regulator evidence</span>
+            </div>
             <div className="architecture-foot">
               <div>
                 <span>VERDICT MODEL</span>
-                <strong>06 STATES</strong>
+                <strong>07 STATES</strong>
               </div>
               <div>
                 <span>CRYPTOGRAPHY</span>
@@ -83,11 +88,29 @@ export default function Home() {
       </section>
 
       <section className="statement-strip">
-        <p>
-          <span>one forwarded file.</span> three lines of defence.
-          <br />
-          provenance → tamper detection → campaign intelligence.
-        </p>
+        <div className="statement-copy">
+          <p className="eyebrow">ONE INPUT / THREE DECISIONS</p>
+          <h2>From forwarded file<br /><span>to actionable signal.</span></h2>
+        </div>
+        <div className="defence-flow" aria-label="Three lines of defence">
+          <div>
+            <span>01</span>
+            <strong>Provenance</strong>
+            <p>Find the signed source and validate its issuer key.</p>
+          </div>
+          <i aria-hidden="true">→</i>
+          <div>
+            <span>02</span>
+            <strong>Tamper detection</strong>
+            <p>Separate harmless forwarding from a changed claim or payee.</p>
+          </div>
+          <i aria-hidden="true">→</i>
+          <div>
+            <span>03</span>
+            <strong>Campaign intelligence</strong>
+            <p>Link repeated indicators into evidence a regulator can review.</p>
+          </div>
+        </div>
       </section>
 
       <section className="layers-section">
@@ -151,45 +174,77 @@ export default function Home() {
 
 function TrustTopology() {
   const nodes = [
-    { x: 280, y: 45, label: "issuer" },
-    { x: 438, y: 115, label: "registry" },
-    { x: 468, y: 272, label: "investor" },
-    { x: 356, y: 390, label: "radar" },
-    { x: 190, y: 390, label: "evidence" },
-    { x: 78, y: 272, label: "verifier" },
-    { x: 108, y: 115, label: "content" },
+    { x: 275, y: 58, label: "issuer", state: "PUBLISH", labelY: 22, stateY: 38 },
+    { x: 82, y: 132, label: "content", state: "INPUT", labelY: 162, stateY: 177 },
+    { x: 468, y: 132, label: "registry", state: "KNOWN", labelY: 162, stateY: 177 },
+    { x: 82, y: 300, label: "verifier", state: "CHECK", labelY: 331, stateY: 346 },
+    { x: 468, y: 300, label: "investor", state: "DECIDE", labelY: 331, stateY: 346 },
+    { x: 198, y: 400, label: "evidence", state: "EXPORT", labelY: 431, stateY: 446 },
+    { x: 352, y: 400, label: "radar", state: "LINK", labelY: 431, stateY: 446 },
   ];
-  const edges = nodes.flatMap((a, i) =>
-    nodes.slice(i + 1).map((b) => ({ a, b, key: `${i}-${b.label}` })),
-  );
+  const paths = [
+    { id: "issuer-core", d: "M 275 74 L 275 177", kind: "primary" },
+    { id: "content-core", d: "M 98 137 C 165 145 207 178 235 207", kind: "primary" },
+    { id: "core-registry", d: "M 315 207 C 354 177 405 143 452 137", kind: "primary" },
+    { id: "core-verifier", d: "M 235 242 C 190 257 148 281 98 296", kind: "primary" },
+    { id: "verifier-investor", d: "M 98 305 C 205 354 345 354 452 305", kind: "decision" },
+    { id: "verifier-evidence", d: "M 91 315 C 115 352 151 383 187 397", kind: "secondary" },
+    { id: "evidence-radar", d: "M 214 400 L 336 400", kind: "secondary" },
+    { id: "radar-registry", d: "M 364 390 C 426 340 461 237 466 148", kind: "secondary" },
+  ];
   return (
     <svg
       className="trust-topology"
-      viewBox="0 0 550 440"
+      viewBox="0 0 550 460"
       role="img"
-      aria-label="PramaanSetu trust topology connecting issuers, content, verification, evidence, radar, investors and registry"
+      aria-label="Directional PramaanSetu flow from issuer and content through provenance, verification, investor decision, evidence and regulator radar"
     >
+      <defs>
+        <marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+      </defs>
       <g className="topology-lines">
-        {edges.map(({ a, b, key }) => (
-          <line key={key} x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
+        {paths.map((path) => (
+          <path
+            id={path.id}
+            className={path.kind}
+            key={path.id}
+            d={path.d}
+            markerEnd="url(#flow-arrow)"
+          />
         ))}
       </g>
-      <circle className="orbit" cx="273" cy="228" r="184" />
-      <circle className="core-ring" cx="273" cy="228" r="42" />
-      <circle className="core" cx="273" cy="228" r="8" />
-      <text className="core-label" x="273" y="220">PRAMAAN</text>
-      <text className="core-sub" x="273" y="250">TRUST CORE</text>
-      {nodes.map((node, i) => (
-        <g key={node.label}>
-          <circle className={i === 2 ? "topology-node active" : "topology-node"} cx={node.x} cy={node.y} r="13" />
+      <g className="topology-particles" aria-hidden="true">
+        <circle r="3">
+          <animateMotion path="M 275 74 L 275 177" dur="2.4s" repeatCount="indefinite" />
+        </circle>
+        <circle r="3">
+          <animateMotion path="M 98 137 C 165 145 207 178 235 207" dur="3s" begin=".5s" repeatCount="indefinite" />
+        </circle>
+        <circle r="3">
+          <animateMotion path="M 315 207 C 354 177 405 143 452 137" dur="2.8s" begin="1s" repeatCount="indefinite" />
+        </circle>
+        <circle r="3">
+          <animateMotion path="M 98 305 C 205 354 345 354 452 305" dur="3.6s" begin=".8s" repeatCount="indefinite" />
+        </circle>
+        <circle r="3">
+          <animateMotion path="M 214 400 L 336 400" dur="2.2s" begin=".2s" repeatCount="indefinite" />
+        </circle>
+      </g>
+      <circle className="orbit orbit-outer" cx="275" cy="225" r="75" />
+      <circle className="orbit orbit-inner" cx="275" cy="225" r="57" />
+      <circle className="scan-ring" cx="275" cy="225" r="50" />
+      <circle className="core-ring" cx="275" cy="225" r="44" />
+      <circle className="core" cx="275" cy="225" r="8" />
+      <text className="core-label" x="275" y="218">PRAMAAN</text>
+      <text className="core-sub" x="275" y="244">TRUST ENGINE</text>
+      {nodes.map((node) => (
+        <g className="topology-station" key={node.label}>
+          <circle className={node.label === "investor" ? "topology-node active" : "topology-node"} cx={node.x} cy={node.y} r="15" />
           <circle className="topology-node-dot" cx={node.x} cy={node.y} r="4" />
-          <text
-            className="topology-label"
-            x={node.x}
-            y={node.y + (node.y < 100 ? -24 : 31)}
-          >
-            {node.label}
-          </text>
+          <text className="topology-label" x={node.x} y={node.labelY}>{node.label}</text>
+          <text className="topology-node-state" x={node.x} y={node.stateY}>{node.state}</text>
         </g>
       ))}
     </svg>

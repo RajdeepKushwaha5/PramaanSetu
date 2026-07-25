@@ -31,6 +31,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    let observer: IntersectionObserver | undefined;
+    const timer = window.setTimeout(() => {
+      const targets = document.querySelectorAll(
+        ".page > section, .panel, .layer-card, .principle-table > div, .radar-stat",
+      );
+
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        targets.forEach((target) => target.classList.add("is-visible"));
+        return;
+      }
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+              observer?.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.08, rootMargin: "0px 0px -6% 0px" },
+      );
+
+      targets.forEach((target) => {
+        target.classList.add("reveal-ready");
+        observer?.observe(target);
+      });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
+  }, [pathname]);
+
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);

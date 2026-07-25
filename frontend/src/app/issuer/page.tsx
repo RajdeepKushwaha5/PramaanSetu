@@ -39,6 +39,7 @@ function fileToBase64(file: File): Promise<string> {
 export default function IssuerPage() {
   const [issuers, setIssuers] = useState<Issuer[]>([]);
   const [issuerId, setIssuerId] = useState("");
+  const [issuerKey, setIssuerKey] = useState("");
   const [title, setTitle] = useState("");
   const [mode, setMode] = useState<"text" | "file">("file");
   const [text, setText] = useState("");
@@ -91,9 +92,12 @@ export default function IssuerPage() {
         body.content = await fileToBase64(file);
         body.mimeType = file.type || "application/octet-stream";
       }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (issuerKey.trim()) headers["x-issuer-key"] = issuerKey.trim();
+
       const response = await fetch(apiUrl("/api/sign"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
       });
       const data = await response.json();
@@ -194,6 +198,19 @@ export default function IssuerPage() {
                   </span>
                 </div>
               )}
+
+              <label className="field credential-field">
+                <span>issuer signing key / optional for local demo issuers</span>
+                <input
+                  className="form-control"
+                  type="password"
+                  autoComplete="off"
+                  value={issuerKey}
+                  onChange={(e) => setIssuerKey(e.target.value)}
+                  placeholder="psk_••••••••••••••••"
+                />
+                <small>Required for production issuers. The key is sent only with this signing request.</small>
+              </label>
 
               <label className="field">
                 <span>02 / communication title</span>
