@@ -63,18 +63,71 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+const SAMPLES: { id: string; key: string; mime: string; name: string; label: string; tone: string }[] = [
+  { id: "gi", key: "original_png_expect_original", mime: "image/png", name: "genuine-circular.png", label: "genuine image", tone: "verified" },
+  { id: "fi", key: "altered_png_expect_altered", mime: "image/png", name: "forged-circular.png", label: "forged QR · image", tone: "danger" },
+  { id: "gp", key: "original_pdf_expect_original", mime: "application/pdf", name: "genuine-circular.pdf", label: "genuine PDF", tone: "verified" },
+  { id: "fp", key: "altered_pdf_expect_altered", mime: "application/pdf", name: "forged-circular.pdf", label: "forged QR · PDF", tone: "danger" },
+];
+
+function base64ToFile(b64: string, mime: string, name: string): File {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new File([arr], name, { type: mime });
+}
+
 export default function VerifyPage() {
   const [mode, setMode] = useState<"text" | "file">("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sampleBusy, setSampleBusy] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const demoCache = useRef<Record<string, string> | null>(null);
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  async function getDemo(): Promise<Record<string, string>> {
+    if (!demoCache.current) {
+      const r = await fetch(apiUrl("/api/seed"), { method: "POST" });
+      const data = await r.json();
+      demoCache.current = (data.demoImages ?? {}) as Record<string, string>;
+    }
+    return demoCache.current ?? {};
+  }
+
+  async function runSample(s: (typeof SAMPLES)[number]) {
+    setSampleBusy(s.id);
+    setError(null);
+    setResult(null);
+    try {
+      const demo = await getDemo();
+      const b64 = demo[s.key];
+      if (!b64) throw new Error("Demo sample unavailable — is the backend running?");
+      const f = base64ToFile(b64, s.mime, s.name);
+      setMode("file");
+      setFile(f);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(s.mime.startsWith("image/") ? URL.createObjectURL(f) : null);
+      const response = await fetch(apiUrl("/api/verify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: b64, mimeType: s.mime }),
+      });
+      const data = await response.json();
+      if (!response.ok) setError(data.error || "Verification failed");
+      else setResult(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSampleBusy(null);
+    }
+  }
 
   function switchMode(next: "text" | "file") {
     setMode(next);
@@ -128,6 +181,11 @@ export default function VerifyPage() {
           <p className="page-lede">
             Paste the message you received or upload the forwarded file. PramaanSetu
             checks provenance first, then uses AI only when cryptographic evidence is absent.
+          </p>
+          <p className="channel-note">
+            <span className="tag blue">TELEGRAM</span>
+            The same verifier runs as a Telegram bot — forward a suspicious message,
+            image, or PDF in chat and get the identical verdict, where scams actually spread.
           </p>
         </div>
       </section>
@@ -185,6 +243,23 @@ export default function VerifyPage() {
               {loading ? "running verification…" : "run verification"}
               <span>→</span>
             </button>
+          </div>
+
+          <div className="demo-samples">
+            <span className="micro-label">no file? verify a live sample in one click</span>
+            <div className="demo-sample-row">
+              {SAMPLES.map((s) => (
+                <button
+                  key={s.id}
+                  className={`demo-sample ${s.tone}`}
+                  onClick={() => runSample(s)}
+                  disabled={sampleBusy !== null}
+                >
+                  <i />
+                  <span>{sampleBusy === s.id ? "verifying…" : s.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {error && <div className="error-box">{error}</div>}
         </div>
