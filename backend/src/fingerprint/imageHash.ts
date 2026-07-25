@@ -69,6 +69,33 @@ export function bestChangedCells(a: string[], b: string[]): number {
 export const GRID_SIZE = GRID;
 
 /**
+ * Compact 64-bit coarse signature (8x8 grayscale average-hash) derived from the
+ * full colour fingerprint. Robust to recompression, so a copy/altered image
+ * shares almost all bits with its original — which lets an LSH index bucket
+ * them together for sub-linear candidate search.
+ */
+export function coarseSignature(b64: string): bigint {
+  const buf = Buffer.from(b64, "base64"); // 32x32x3
+  const small = new Array<number>(64).fill(0);
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      const i = y * GRID + x;
+      const gray = (buf[i * 3] + buf[i * 3 + 1] + buf[i * 3 + 2]) / 3;
+      small[(y >> 2) * 8 + (x >> 2)] += gray;
+    }
+  }
+  let mean = 0;
+  for (let i = 0; i < 64; i++) {
+    small[i] /= 16;
+    mean += small[i];
+  }
+  mean /= 64;
+  let sig = 0n;
+  for (let i = 0; i < 64; i++) sig = (sig << 1n) | (small[i] > mean ? 1n : 0n);
+  return sig;
+}
+
+/**
  * Per-cell change map between two fingerprints — used to localise tampering
  * (draw a heatmap over the changed region). Returns a row-major array of 0/1.
  */

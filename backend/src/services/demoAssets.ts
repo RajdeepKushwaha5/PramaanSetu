@@ -8,6 +8,7 @@
 
 import { Jimp } from "jimp";
 import QRCode from "qrcode";
+import { PDFDocument } from "pdf-lib";
 
 const WIDTH = 480;
 const HEIGHT = 320;
@@ -48,10 +49,22 @@ async function recompress(pngBuffer: Buffer): Promise<Buffer> {
   return img.getBuffer("image/jpeg", { quality: 45 });
 }
 
+/** Wrap a circular PNG in a single-page PDF (forged SEBI circulars are PDFs). */
+async function buildCircularPdf(upiPayload: string): Promise<Buffer> {
+  const png = await buildCircular(upiPayload);
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([WIDTH, HEIGHT]);
+  const img = await pdf.embedPng(png);
+  page.drawImage(img, { x: 0, y: 0, width: WIDTH, height: HEIGHT });
+  return Buffer.from(await pdf.save());
+}
+
 export interface DemoBundle {
   originalPng: Buffer;
   compressedJpg: Buffer; // -> Derivative
   alteredPng: Buffer; // -> Altered (swapped payment QR)
+  originalPdf: Buffer; // signed reference PDF circular
+  alteredPdf: Buffer; // -> Altered (forged PDF, swapped payment QR)
   approvedUpi: string;
   fraudUpi: string;
 }
@@ -60,10 +73,14 @@ export async function makeDemoBundle(): Promise<DemoBundle> {
   const originalPng = await buildCircular(APPROVED_UPI);
   const compressedJpg = await recompress(originalPng);
   const alteredPng = await buildCircular(FRAUD_UPI);
+  const originalPdf = await buildCircularPdf(APPROVED_UPI);
+  const alteredPdf = await buildCircularPdf(FRAUD_UPI);
   return {
     originalPng,
     compressedJpg,
     alteredPng,
+    originalPdf,
+    alteredPdf,
     approvedUpi: "sebi@valid",
     fraudUpi: "fraudster12@ybl",
   };

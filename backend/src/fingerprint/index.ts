@@ -1,6 +1,7 @@
 import type { MediaType } from "../db/types.js";
 import { imageFingerprint } from "./imageHash.js";
 import { videoFrameHashes } from "./videoHash.js";
+import { renderPdfPages } from "./pdf.js";
 
 export { sha256 } from "./contentHash.js";
 export {
@@ -8,9 +9,11 @@ export {
   changedCells,
   bestChangedCells,
   cellDiffGrid,
+  coarseSignature,
   GRID_SIZE,
 } from "./imageHash.js";
 export { isFfmpegAvailable, videoFrameHashes } from "./videoHash.js";
+export { renderPdfPages, renderPdfFirstPage } from "./pdf.js";
 
 /**
  * Verdict thresholds on the changed-cell count (out of 1024).
@@ -52,6 +55,10 @@ export async function computePerceptualHashes(
   try {
     if (mediaType === "image") return [await imageFingerprint(buffer)];
     if (mediaType === "video") return await videoFrameHashes(buffer, extFromMime(mime));
+    if (mediaType === "pdf") {
+      const pages = await renderPdfPages(buffer);
+      return Promise.all(pages.map((p) => imageFingerprint(p)));
+    }
   } catch (e) {
     console.error("perceptual fingerprint failed:", e);
   }

@@ -25,25 +25,23 @@ const SEED_ISSUERS: SeedIssuer[] = [
   { name: "Reliance Industries Ltd", sebiRegNo: "INE002A01018", entityClass: "listed_company", validUpiHandles: ["rilinvestor@valid"], registrationSource: "https://www.bseindia.com/stock-share-price/reliance-industries-ltd" },
 ];
 
+// A small "public corpus": representative official communications, fingerprinted
+// so a forged/altered version of any of them is detectable with zero issuer
+// onboarding. In production a crawler ingests the full public SEBI/exchange
+// corpus; here we seed a representative set.
 const SEED_ANNOUNCEMENTS = [
-  {
-    reg: "SEBI-IND-0001",
-    title: "Investor Advisory: Beware of Fake Trading Apps",
-    text: "SEBI advises investors to deal only with registered intermediaries. Verify UPI handles ending in @valid before any payment. SEBI never guarantees returns.",
-    url: "https://www.sebi.gov.in/advisory",
-  },
-  {
-    reg: "NSE-EXCH-0002",
-    title: "NSE Circular: Revised Trading Hours",
-    text: "NSE notifies revised trading hours effective next settlement cycle. Members are advised to update systems accordingly.",
-    url: "https://www.nseindia.com/circulars",
-  },
-  {
-    reg: "INE002A01018",
-    title: "RIL Q1 Results Announcement",
-    text: "Reliance Industries announces Q1 results. Official disclosures are available only on the exchange filing portal.",
-    url: "https://www.ril.com/investors",
-  },
+  { reg: "SEBI-IND-0001", title: "Investor Advisory: Beware of Fake Trading Apps", text: "SEBI advises investors to deal only with registered intermediaries. Verify UPI handles ending in @valid before any payment. SEBI never guarantees returns.", url: "https://www.sebi.gov.in/investors" },
+  { reg: "SEBI-IND-0001", title: "SEBI Check: Verify Intermediary UPI and Bank Details", text: "Before paying any intermediary, verify the UPI ID, bank account and IFSC using SEBI Check on the SEBI SCORES / SAARTHI app.", url: "https://www.sebi.gov.in/sebi_check" },
+  { reg: "SEBI-IND-0001", title: "Caution against Deepfake and Impersonation Content", text: "SEBI cautions investors against deepfake videos and social media posts impersonating SEBI officials, exchanges and market experts promising assured returns.", url: "https://www.sebi.gov.in/media" },
+  { reg: "SEBI-IND-0001", title: "Master Circular for Stock Brokers", text: "Consolidated directions applicable to stock brokers, including client funds, reporting obligations and technology governance.", url: "https://www.sebi.gov.in/legal/master-circulars" },
+  { reg: "SEBI-IND-0001", title: "Advisory on Unregistered Investment Advisers", text: "Investors are advised to deal only with SEBI-registered investment advisers. Verify registration on the SEBI website before acting on any advice.", url: "https://www.sebi.gov.in/intermediaries" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Revised Trading Hours", text: "NSE notifies revised trading hours effective next settlement cycle. Members are advised to update systems accordingly.", url: "https://www.nseindia.com/circulars" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Verified Trading App Advisory", text: "NSE advises investors to download trading applications only from official app stores and verified member sources.", url: "https://www.nseindia.com/circulars" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Margin Reporting Framework Update", text: "Members are notified of updates to the margin reporting framework effective from the next settlement cycle.", url: "https://www.nseindia.com/circulars" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Guidance on Social Media Solicitation", text: "Members shall not solicit clients through unverified social media channels promising assured returns.", url: "https://www.nseindia.com/circulars" },
+  { reg: "INE002A01018", title: "RIL Q1 Results Announcement", text: "Reliance Industries announces Q1 results. Official disclosures are available only on the exchange filing portal.", url: "https://www.ril.com/investors" },
+  { reg: "INE002A01018", title: "RIL Investor Notice: Beware of Fake Dividend Messages", text: "Reliance Industries cautions shareholders against fraudulent messages requesting payment to claim dividends or bonus shares.", url: "https://www.ril.com/investors" },
+  { reg: "INE002A01018", title: "RIL Board Meeting Intimation", text: "Intimation of the board meeting to consider and approve financial results. Official filings are on the exchange portals only.", url: "https://www.ril.com/investors" },
 ];
 
 seedRouter.post("/", async (req, res) => {
@@ -94,7 +92,7 @@ seedRouter.post("/", async (req, res) => {
     }
   }
 
-  // 3) A signed "official circular" image + return demo variants for testing.
+  // 3) A signed "official circular" as both image and PDF + demo variants.
   const sebi = store.getIssuerBySebiReg("SEBI-IND-0001")!;
   const bundle = await makeDemoBundle();
   const circularTitle = "SEBI Master Circular (demo image)";
@@ -108,6 +106,17 @@ seedRouter.post("/", async (req, res) => {
     });
     signed.push(circularTitle);
   }
+  const pdfTitle = "SEBI Master Circular (demo PDF)";
+  if (!store.listAssets().some((x) => x.title === pdfTitle)) {
+    await signContent({
+      issuerId: sebi.id,
+      title: pdfTitle,
+      mimeType: "application/pdf",
+      bytes: bundle.originalPdf,
+      authoritativeUrl: "https://www.sebi.gov.in/circulars",
+    });
+    signed.push(pdfTitle);
+  }
 
   res.json({
     message: "Seed complete.",
@@ -118,6 +127,8 @@ seedRouter.post("/", async (req, res) => {
       original_png_expect_original: bundle.originalPng.toString("base64"),
       compressed_jpg_expect_derivative: bundle.compressedJpg.toString("base64"),
       altered_png_expect_altered: bundle.alteredPng.toString("base64"),
+      original_pdf_expect_original: bundle.originalPdf.toString("base64"),
+      altered_pdf_expect_altered: bundle.alteredPdf.toString("base64"),
     },
   });
 });

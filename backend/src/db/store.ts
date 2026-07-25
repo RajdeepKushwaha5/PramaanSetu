@@ -32,9 +32,16 @@ function emptyDb(): DbShape {
 
 class Store {
   private db: DbShape;
+  private autoFlush = true;
 
   constructor() {
     this.db = this.load();
+  }
+
+  /** Defer disk writes during bulk loads; pass true to flush once and resume. */
+  setAutoFlush(on: boolean): void {
+    this.autoFlush = on;
+    if (on) this.flush();
   }
 
   private load(): DbShape {
@@ -49,6 +56,7 @@ class Store {
   }
 
   private flush(): void {
+    if (!this.autoFlush) return;
     if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(DB_PATH, JSON.stringify(this.db, null, 2), "utf8");
   }

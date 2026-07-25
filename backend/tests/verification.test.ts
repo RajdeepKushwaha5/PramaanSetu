@@ -114,3 +114,34 @@ test("evidence pack is signed and carries methodology", async () => {
   assert.ok(pack.integrity?.signature, "evidence pack must be signed");
   assert.ok(pack.methodology, "evidence pack must state methodology");
 });
+
+test("chat bot reply marks a genuine original as VERIFIED", async () => {
+  const { verifyAndFormat } = await import("../src/bot/verifyReply.js");
+  const reply = await verifyAndFormat({ bytes: bundle.originalPng, mimeType: "image/png" });
+  assert.match(reply, /VERIFIED ORIGINAL/);
+});
+
+test("chat bot reply flags a swapped-QR image with the fraud payee", async () => {
+  const { verifyAndFormat } = await import("../src/bot/verifyReply.js");
+  const reply = await verifyAndFormat({ bytes: bundle.alteredPng, mimeType: "image/png" });
+  assert.match(reply, /ALTERED/);
+  assert.match(reply, /fraudster12@ybl/);
+  assert.match(reply, /Do NOT pay/i);
+});
+
+test("signed PDF circular verifies as original", async () => {
+  await signContent({
+    issuerId,
+    title: "SEBI Master Circular (PDF)",
+    mimeType: "application/pdf",
+    bytes: bundle.originalPdf,
+  });
+  const r = await verifyContent({ mimeType: "application/pdf", bytes: bundle.originalPdf });
+  assert.equal(r.verdict, "original");
+});
+
+test("forged PDF circular with swapped QR -> altered, names the fraud payee", async () => {
+  const r = await verifyContent({ mimeType: "application/pdf", bytes: bundle.alteredPdf });
+  assert.equal(r.verdict, "altered");
+  assert.equal(r.match?.paymentTamper?.foundPayee, "fraudster12@ybl");
+});

@@ -152,6 +152,38 @@ accuracy claim. It does not represent WhatsApp or Telegram forwarding,
 screenshots, rotations, crops, real exchange documents, adversarial edits, or
 different camera conditions.
 
+### Scalability
+
+Verification must compare a submitted image against every signed asset. A plain
+linear scan is fine for a demo but O(n) at national scale, so an LSH index
+(banded average-hash buckets) narrows the candidates before the exact
+comparison. A separate benchmark signs a large corpus and measures the search:
+
+```bash
+npm run benchmark:scale        # or: npm run benchmark:scale -- 10000
+```
+
+Latest local run at **10,001 signed assets** (correct recall on original /
+recompressed / altered / unrelated, no false matches):
+
+| Candidate search (probe precomputed) | Result |
+| --- | ---: |
+| LSH index (narrowed to ~48 candidates) | ~1.9 ms |
+| Full linear scan of all 10,001 assets | ~62 ms |
+| Speedup | ~33x |
+
+The exact verdict is still decided by the precise changed-cell comparison; the
+index only narrows which assets are compared, so verdict correctness is
+unchanged. Production would move this to PostgreSQL + pgvector or FAISS.
+
+### Messaging-app channel (Telegram)
+
+A Telegram bot (`backend/src/bot/`) lets an investor forward a suspicious
+message, image, or PDF and get the same verdict the web verifier returns —
+meeting victims inside the app where scams actually spread. It activates when
+`TELEGRAM_BOT_TOKEN` is set (get one from @BotFather in ~30s). WhatsApp Business
+API is the same integration pattern for production.
+
 ## Tests
 
 Run the backend test suite from the repository root:

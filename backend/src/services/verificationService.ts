@@ -22,6 +22,8 @@ import {
   sha256,
 } from "../fingerprint/index.js";
 import { decodeQr, extractUpiPayee } from "../fingerprint/qr.js";
+import { getFingerprintIndex } from "../fingerprint/fpIndex.js";
+import { renderPdfFirstPage } from "../fingerprint/pdf.js";
 import { assessRisk, type RiskAssessment } from "../ai/riskEngine.js";
 import { env } from "../config/env.js";
 
@@ -154,12 +156,14 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
     };
   }
 
-  // 2) Perceptual match (image/video) -> Derivative or Altered.
-  if (mediaType === "image" || mediaType === "video") {
+  // 2) Perceptual match (image/video/pdf) -> Derivative or Altered.
+  if (mediaType === "image" || mediaType === "video" || mediaType === "pdf") {
     const probe = await computePerceptualHashes(contentBuf, mediaType, input.mimeType);
     if (probe.length > 0) {
+      // Sub-linear candidate narrowing via the LSH index, then exact compare.
+      const candidates = getFingerprintIndex().candidates(probe, store.listAssets());
       let best: { asset: SignedAsset; dist: number } | null = null;
-      for (const asset of store.listAssets()) {
+      for (const asset of candidates) {
         if (asset.perceptualHashes.length === 0) continue;
         const d = bestChangedCells(probe, asset.perceptualHashes);
         if (!best || d < best.dist) best = { asset, dist: d };
@@ -187,8 +191,15 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
 
         // Payment-tamper check: decode the QR and confirm the payee is still an
         // approved handle — catches a swapped payment QR even when pixels match.
-        if (mediaType === "image" && contentBuf) {
-          const qrText = await decodeQr(contentBuf);
+        // For PDFs, decode the QR from the rendered first page.
+        const qrBuffer =
+          mediaType === "image"
+            ? contentBuf
+            : mediaType === "pdf"
+              ? await renderPdfFirstPage(contentBuf)
+              : null;
+        if (qrBuffer) {
+          const qrText = await decodeQr(qrBuffer);
           const payee = qrText ? extractUpiPayee(qrText) : null;
           const approved = best.asset.manifest.approvedPaymentHandles;
           if (payee && approved.length > 0 && !approved.includes(payee)) {

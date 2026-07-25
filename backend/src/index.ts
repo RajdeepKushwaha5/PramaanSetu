@@ -10,6 +10,7 @@ import { signRouter } from "./routes/sign.js";
 import { verifyRouter } from "./routes/verify.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { seedRouter } from "./routes/seed.js";
+import { startTelegramBot } from "./bot/telegram.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -62,4 +63,8 @@ app.use("/api", campaignsRouter);
 
 app.listen(PORT, () => {
   console.log(`PramaanSetu backend listening on http://localhost:${PORT}`);
+  // Optional messaging-app channel (activates only if TELEGRAM_BOT_TOKEN is set).
+  if (!startTelegramBot()) {
+    console.log("Telegram bot inactive (set TELEGRAM_BOT_TOKEN to enable).");
+  }
 });
