@@ -1,13 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
 
-interface RiskSignal {
-  label: string;
-  detail: string;
-}
+interface RiskSignal { label: string; detail: string }
 interface Risk {
   riskLevel?: string;
   riskScore?: number;
@@ -21,11 +17,7 @@ interface Risk {
   unavailable?: boolean;
   reason?: string;
 }
-interface TamperMap {
-  grid: number;
-  changedCells: number;
-  cells: number[];
-}
+interface TamperMap { grid: number; changedCells: number; cells: number[] }
 interface Match {
   title: string;
   issuerName: string;
@@ -42,38 +34,32 @@ interface Match {
   paymentTamper?: { foundPayee: string; approvedPayees: string[] };
 }
 interface VerifyResult {
-  verdict:
-    | "original"
-    | "derivative"
-    | "altered"
-    | "invalid_provenance"
-    | "revoked"
-    | "expired"
-    | "unverified";
+  verdict: "original" | "derivative" | "altered" | "invalid_provenance" | "revoked" | "expired" | "unverified";
   mediaType: string;
   match?: Match;
   risk?: Risk;
   message: string;
+  contentHash?: string;
 }
 
 const SAMPLE = `URGENT! SEBI registered advisor here. Join our VIP WhatsApp group for guaranteed 300% returns. Limited seats! Pay Rs 5000 to 9876543210@paytm and start earning. Download our app: bit.ly/trade-win`;
 
-const VERDICT: Record<string, { label: string; cls: string; icon: string }> = {
-  original: { label: "Verified Original", cls: "bg-green-100 border-green-400 text-green-900", icon: "✓" },
-  derivative: { label: "Verified Copy", cls: "bg-green-50 border-green-300 text-green-800", icon: "✓" },
-  altered: { label: "Altered — Do Not Trust", cls: "bg-orange-100 border-orange-400 text-orange-900", icon: "▲" },
-  invalid_provenance: { label: "Invalid Signature", cls: "bg-red-100 border-red-500 text-red-900", icon: "✗" },
-  revoked: { label: "Revoked", cls: "bg-red-100 border-red-400 text-red-900", icon: "✗" },
-  expired: { label: "Expired", cls: "bg-amber-100 border-amber-400 text-amber-900", icon: "▲" },
-  unverified: { label: "Unverified", cls: "bg-red-50 border-red-300 text-red-900", icon: "✗" },
+const VERDICT: Record<string, { label: string; code: string; tone: string; note: string }> = {
+  original: { label: "Verified original", code: "V–01", tone: "verified", note: "Exact signed record found" },
+  derivative: { label: "Verified copy", code: "V–02", tone: "verified", note: "Forwarded or recompressed copy" },
+  altered: { label: "Altered content", code: "A–01", tone: "danger", note: "Matched source, material changes found" },
+  invalid_provenance: { label: "Invalid signature", code: "A–02", tone: "danger", note: "Cryptographic proof failed" },
+  revoked: { label: "Revoked", code: "A–03", tone: "danger", note: "Issuer withdrew this communication" },
+  expired: { label: "Expired", code: "C–01", tone: "caution", note: "Authentic, but no longer current" },
+  unverified: { label: "Unverified", code: "U–01", tone: "caution", note: "No official signed record found" },
 };
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve((r.result as string).split(",")[1] ?? "");
-    r.onerror = reject;
-    r.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -85,6 +71,16 @@ export default function VerifyPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  function switchMode(next: "text" | "file") {
+    setMode(next);
+    setResult(null);
+    setError(null);
+  }
 
   async function submit() {
     setLoading(true);
@@ -98,15 +94,16 @@ export default function VerifyPage() {
       } else if (file) {
         body.content = await fileToBase64(file);
         body.mimeType = file.type || "application/octet-stream";
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
         setPreviewUrl(URL.createObjectURL(file));
       }
-      const res = await fetch(apiUrl("/api/verify"), {
+      const response = await fetch(apiUrl("/api/verify"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) setError(data.error || data.detail || "Request failed");
+      const data = await response.json();
+      if (!response.ok) setError(data.error || data.detail || "Verification request failed");
       else setResult(data);
     } catch (e) {
       setError((e as Error).message);
@@ -115,174 +112,232 @@ export default function VerifyPage() {
     }
   }
 
-  const v = result ? VERDICT[result.verdict] : null;
-
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/" className="text-sm text-[color:var(--blue)] underline">
-        ← Back
-      </Link>
-      <h1 className="mt-4 text-3xl font-extrabold text-[color:var(--navy)]">
-        Investor Verifier
-      </h1>
-      <p className="mt-2 text-slate-600">
-        Forward any suspicious message or upload a document / image. We check it
-        against signed official records first, then run AI risk analysis only if
-        it is unverified.
-      </p>
-
-      <div className="mt-6 flex gap-2">
-        <TabButton active={mode === "text"} onClick={() => setMode("text")}>
-          Paste message
-        </TabButton>
-        <TabButton active={mode === "file"} onClick={() => setMode("file")}>
-          Upload image / document
-        </TabButton>
-      </div>
-
-      <div className="mt-4">
-        {mode === "text" ? (
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={5}
-            placeholder="Paste a suspicious WhatsApp / Telegram message..."
-            className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm"
-          />
-        ) : (
-          <input
-            type="file"
-            accept="image/*,video/*,application/pdf"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm"
-          />
-        )}
-        <div className="mt-3 flex items-center gap-3">
-          <button
-            onClick={submit}
-            disabled={loading || (mode === "text" ? !text.trim() : !file)}
-            className="rounded-lg bg-[color:var(--navy)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {loading ? "Checking..." : "Verify this"}
-          </button>
-          {mode === "text" && (
-            <button
-              onClick={() => setText(SAMPLE)}
-              className="text-sm text-[color:var(--blue)] underline"
-            >
-              Load a sample scam
-            </button>
-          )}
+    <main className="page verifier-page">
+      <section className="page-intro">
+        <div className="page-intro-index">
+          <strong>02</strong>
+          <div><span>INVESTOR SURFACE</span><span>DETERMINISTIC → AI</span></div>
         </div>
-      </div>
-
-      {error && (
-        <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-          {error}
+        <div className="page-intro-copy">
+          <p className="eyebrow">INVESTOR VERIFIER / CONTENT INTAKE</p>
+          <h1 className="page-title">
+            do not trust the styling.
+            <span className="muted"> verify the source.</span>
+          </h1>
+          <p className="page-lede">
+            Paste the message you received or upload the forwarded file. PramaanSetu
+            checks provenance first, then uses AI only when cryptographic evidence is absent.
+          </p>
         </div>
-      )}
+      </section>
 
-      {result && v && (
-        <div className="mt-8 space-y-4">
-          <div className={`rounded-lg border-2 p-5 ${v.cls}`}>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-black">{v.icon}</span>
-              <span className="text-2xl font-extrabold">{v.label}</span>
+      <section className="verifier-workspace">
+        <div className="verify-form-column">
+          <div className="workspace-heading">
+            <span className="micro-label">01 / SELECT INPUT</span>
+            <div className="tabs" role="tablist" aria-label="Verification input type">
+              <button className={mode === "text" ? "active" : ""} onClick={() => switchMode("text")}>message</button>
+              <button className={mode === "file" ? "active" : ""} onClick={() => switchMode("file")}>media / document</button>
             </div>
-            <p className="mt-2 text-sm">{result.message}</p>
           </div>
 
-          {/* Payment redirection — the headline fraud signal */}
-          {result.match?.paymentTamper && (
-            <div className="rounded-lg border-2 border-red-500 bg-red-50 p-4">
-              <div className="text-sm font-bold uppercase tracking-wide text-red-700">
-                Payment redirection detected
-              </div>
-              <p className="mt-1 text-sm text-red-900">
-                The payment QR now points to{" "}
-                <span className="font-mono font-bold">
-                  {result.match.paymentTamper.foundPayee}
-                </span>
-                , which is not an approved handle. Approved:{" "}
-                <span className="font-mono">
-                  {result.match.paymentTamper.approvedPayees.join(", ")}
-                </span>
-                .
-              </p>
-            </div>
-          )}
-
-          {/* Tamper heatmap over the uploaded image */}
-          {result.match?.tamperMap &&
-            result.match.tamperMap.changedCells > 0 &&
-            previewUrl && (
-              <TamperHeatmap url={previewUrl} tamperMap={result.match.tamperMap} />
-            )}
-
-          {result.match && (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[color:var(--navy)]">
-                  Provenance match
-                </span>
-                <TrustBadge level={result.match.trustLevel} />
-              </div>
-              <dl className="mt-2 space-y-1">
-                <Row k="Issuer" v={result.match.issuerName} />
-                <Row k="SEBI reg. no." v={result.match.sebiRegNo} />
-                <Row k="Original title" v={result.match.title} />
-                <Row
-                  k="Signature"
-                  v={result.match.signatureValid ? "Valid (Ed25519)" : "NOT valid"}
-                />
-                {result.match.registrationSource && (
-                  <Row k="Registration source" v={result.match.registrationSource} link />
-                )}
-                {result.match.authoritativeUrl && (
-                  <Row k="Official source" v={result.match.authoritativeUrl} link />
-                )}
-                {result.match.approvedPaymentHandles.length > 0 && (
-                  <Row
-                    k="Approved payment"
-                    v={result.match.approvedPaymentHandles.join(", ")}
+          <div className="intake-zone">
+            {mode === "text" ? (
+              <>
+                <label className="field">
+                  <span>Suspicious message</span>
+                  <textarea
+                    className="form-control intake-textarea"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Paste a WhatsApp message, investment tip, offer, or advisory…"
                   />
-                )}
-              </dl>
-              {result.match.differences && (
-                <ul className="mt-3 list-disc pl-5 text-orange-800">
-                  {result.match.differences.map((d, i) => (
-                    <li key={i}>{d}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+                </label>
+                <button className="sample-link" onClick={() => setText(SAMPLE)}>
+                  <span>↳</span> load a known scam pattern
+                </button>
+              </>
+            ) : (
+              <label className="upload-zone">
+                <input
+                  type="file"
+                  accept="image/*,video/*,application/pdf"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                <span className="upload-glyph">⌁</span>
+                <strong>{file ? file.name : "drop or select suspicious content"}</strong>
+                <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "PNG · JPG · WEBP · MP4 · PDF"}</span>
+              </label>
+            )}
+          </div>
 
-          {result.risk && !result.risk.unavailable && <RiskCard risk={result.risk} />}
-          {result.risk?.unavailable && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              AI risk engine unavailable: {result.risk.reason}
+          <div className="intake-actions">
+            <div>
+              <span className="micro-label">PROCESS</span>
+              <p>hash → signature → fingerprint → risk</p>
             </div>
-          )}
+            <button
+              className="button primary verify-button"
+              onClick={submit}
+              disabled={loading || (mode === "text" ? !text.trim() : !file)}
+            >
+              {loading ? "running verification…" : "run verification"}
+              <span>→</span>
+            </button>
+          </div>
+          {error && <div className="error-box">{error}</div>}
         </div>
-      )}
+
+        <aside className="verify-guide">
+          <div className="panel-header">
+            <span><strong>decision pipeline</strong></span>
+            <div className="panel-dots"><i /><i /><i /></div>
+          </div>
+          {[
+            ["01", "Exact provenance", "SHA–256 lookup and Ed25519 signature validation."],
+            ["02", "Forwarded-copy match", "Perceptual comparison tolerant to recompression."],
+            ["03", "Tamper localisation", "QR payee and changed-region analysis."],
+            ["04", "Unverified risk", "Explainable AI signals; never called genuine."],
+          ].map(([n, title, copy]) => (
+            <div className="pipeline-step" key={n}>
+              <span>{n}</span>
+              <div><strong>{title}</strong><p>{copy}</p></div>
+            </div>
+          ))}
+        </aside>
+      </section>
+
+      <section className="result-region">
+        <div className="result-region-heading">
+          <span className="micro-label">02 / VERIFICATION OUTPUT</span>
+          <span>{result ? "ANALYSIS COMPLETE" : "AWAITING INPUT"}</span>
+        </div>
+        {!result ? (
+          <div className="result-placeholder">
+            <div className="scan-orbit"><i /><i /><i /></div>
+            <p>No verdict generated.</p>
+            <span>Your cryptographic and risk evidence will appear here.</span>
+          </div>
+        ) : (
+          <VerificationResult result={result} previewUrl={previewUrl} />
+        )}
+      </section>
     </main>
   );
 }
 
-function TrustBadge({ level }: { level: "demo" | "validated" }) {
-  if (level === "validated") {
-    return (
-      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
-        Validated issuer
-      </span>
-    );
-  }
+function VerificationResult({ result, previewUrl }: { result: VerifyResult; previewUrl: string | null }) {
+  const verdict = VERDICT[result.verdict];
+  const risk = result.risk;
   return (
-    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-      Demo issuer (identity not externally validated)
-    </span>
+    <div className={`result-console ${verdict.tone}`}>
+      <div className="verdict-banner">
+        <div className="verdict-code">{verdict.code}</div>
+        <div>
+          <span>VERDICT</span>
+          <h2>{verdict.label}</h2>
+          <p>{verdict.note}</p>
+        </div>
+        {risk?.riskScore != null && (
+          <div className="risk-dial">
+            <strong>{risk.riskScore}</strong><span>/100 RISK</span>
+          </div>
+        )}
+      </div>
+
+      <div className="verdict-message">{result.message}</div>
+
+      {result.match?.paymentTamper && (
+        <div className="payment-alert">
+          <div><span>!</span></div>
+          <div>
+            <strong>PAYMENT REDIRECTION DETECTED</strong>
+            <p>
+              QR points to <b>{result.match.paymentTamper.foundPayee}</b>. Approved:
+              {" "}{result.match.paymentTamper.approvedPayees.join(", ")}.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="evidence-grid">
+        {result.match && (
+          <div className="evidence-panel">
+            <div className="panel-header"><strong>provenance record</strong><TrustBadge level={result.match.trustLevel} /></div>
+            <dl className="evidence-list">
+              <EvidenceRow label="issuer" value={result.match.issuerName} />
+              <EvidenceRow label="registration" value={result.match.sebiRegNo} />
+              <EvidenceRow label="record" value={result.match.title} />
+              <EvidenceRow label="signature" value={result.match.signatureValid ? "VALID / ED25519" : "NOT VALID"} tone={result.match.signatureValid ? "good" : "bad"} />
+              {result.match.perceptualDistance != null && <EvidenceRow label="visual delta" value={`${result.match.perceptualDistance} changed cells`} />}
+              {result.match.authoritativeUrl && <EvidenceRow label="official source" value={result.match.authoritativeUrl} href />}
+            </dl>
+          </div>
+        )}
+
+        {risk && !risk.unavailable && (
+          <div className="evidence-panel">
+            <div className="panel-header"><strong>risk intelligence</strong><span className="tag orange">{risk.riskLevel}</span></div>
+            <div className="risk-summary">
+              <p>{risk.summary}</p>
+              {risk.summaryHindi && <p className="hindi">{risk.summaryHindi}</p>}
+            </div>
+            {risk.impersonatedEntity && <EvidenceRow label="impersonates" value={risk.impersonatedEntity} />}
+          </div>
+        )}
+
+        {result.match?.tamperMap && result.match.tamperMap.changedCells > 0 && previewUrl && (
+          <TamperHeatmap url={previewUrl} tamperMap={result.match.tamperMap} />
+        )}
+      </div>
+
+      {risk?.signals && risk.signals.length > 0 && (
+        <div className="signal-section">
+          <div className="panel-header"><strong>observed warning signals</strong><span>{risk.signals.length.toString().padStart(2, "0")} MATCHES</span></div>
+          <div className="signal-grid">
+            {risk.signals.map((signal, i) => (
+              <div key={`${signal.label}-${i}`}>
+                <span>{(i + 1).toString().padStart(2, "0")}</span>
+                <strong>{signal.label}</strong>
+                <p>{signal.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(risk?.paymentHandles?.length || risk?.phoneNumbers?.length || risk?.urls?.length) ? (
+        <div className="indicator-bar">
+          <Indicators label="UPI" items={risk.paymentHandles} />
+          <Indicators label="PHONE" items={risk.phoneNumbers} />
+          <Indicators label="LINKS" items={risk.urls} />
+        </div>
+      ) : null}
+
+      {risk?.unavailable && <div className="error-box">AI risk engine unavailable: {risk.reason}</div>}
+    </div>
   );
+}
+
+function TrustBadge({ level }: { level: "demo" | "validated" }) {
+  return <span className={`tag ${level === "validated" ? "green" : "orange"}`}>{level === "validated" ? "validated issuer" : "demo issuer"}</span>;
+}
+
+function EvidenceRow({ label, value, tone, href }: { label: string; value: string; tone?: "good" | "bad"; href?: boolean }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd className={tone ?? ""}>
+        {href ? <a className="inline-link" href={value} target="_blank" rel="noreferrer">{value}</a> : value}
+      </dd>
+    </div>
+  );
+}
+
+function Indicators({ label, items }: { label: string; items?: string[] }) {
+  if (!items?.length) return null;
+  return <div><span>{label}</span><strong>{items.join(", ")}</strong></div>;
 }
 
 function TamperHeatmap({ url, tamperMap }: { url: string; tamperMap: TamperMap }) {
@@ -290,150 +345,27 @@ function TamperHeatmap({ url, tamperMap }: { url: string; tamperMap: TamperMap }
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 420;
-      const scale = Math.min(1, maxW / img.width);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, 520 / image.width);
+      canvas.width = image.width * scale;
+      canvas.height = image.height * scale;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const g = tamperMap.grid;
-      const cw = canvas.width / g;
-      const ch = canvas.height / g;
-      ctx.fillStyle = "rgba(220,20,60,0.45)";
-      for (let i = 0; i < tamperMap.cells.length; i++) {
-        if (tamperMap.cells[i]) {
-          const cx = (i % g) * cw;
-          const cy = Math.floor(i / g) * ch;
-          ctx.fillRect(cx, cy, cw, ch);
-        }
-      }
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const cellW = canvas.width / tamperMap.grid;
+      const cellH = canvas.height / tamperMap.grid;
+      ctx.fillStyle = "rgba(255,77,79,.48)";
+      tamperMap.cells.forEach((changed, i) => {
+        if (changed) ctx.fillRect((i % tamperMap.grid) * cellW, Math.floor(i / tamperMap.grid) * cellH, cellW, cellH);
+      });
     };
-    img.src = url;
+    image.src = url;
   }, [url, tamperMap]);
   return (
-    <div className="rounded-lg border border-orange-300 bg-white p-4">
-      <div className="text-sm font-semibold text-[color:var(--navy)]">
-        Tamper heatmap — {tamperMap.changedCells} regions changed vs the genuine original
-      </div>
-      <canvas ref={canvasRef} className="mt-2 rounded border border-slate-200" />
-    </div>
-  );
-}
-
-function RiskCard({ risk }: { risk: Risk }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-lg border border-red-300 bg-red-50 p-4">
-        <div>
-          <div className="text-xs font-semibold uppercase text-red-700">AI risk level</div>
-          <div className="text-2xl font-extrabold capitalize text-red-900">
-            {risk.riskLevel}
-          </div>
-        </div>
-        <div className="text-right text-red-900">
-          <div className="text-3xl font-extrabold">{risk.riskScore}</div>
-          <div className="text-xs">/ 100</div>
-        </div>
-      </div>
-
-      {risk.impersonatedEntity && (
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-          <span className="font-semibold text-[color:var(--navy)]">
-            Appears to impersonate:{" "}
-          </span>
-          {risk.impersonatedEntity}
-        </div>
-      )}
-
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="text-sm font-semibold text-[color:var(--navy)]">
-          Why this looks risky
-        </div>
-        <p className="mt-1 text-sm text-slate-700">{risk.summary}</p>
-        {risk.summaryHindi && (
-          <p className="mt-2 text-sm text-slate-500">{risk.summaryHindi}</p>
-        )}
-      </div>
-
-      {risk.signals && risk.signals.length > 0 && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="text-sm font-semibold text-[color:var(--navy)]">
-            Warning signals
-          </div>
-          <ul className="mt-2 space-y-2">
-            {risk.signals.map((s, i) => (
-              <li key={i} className="text-sm">
-                <span className="font-semibold text-[color:var(--accent)]">
-                  {s.label}:
-                </span>{" "}
-                <span className="text-slate-700">{s.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <Extracted label="Payment handles" items={risk.paymentHandles} />
-      <Extracted label="Phone numbers" items={risk.phoneNumbers} />
-      <Extracted label="Links" items={risk.urls} />
-
-      <p className="text-xs text-slate-400">
-        &quot;Unverified&quot; does not prove content is fake, but no official
-        signed record was found. Never pay based on unverified messages.
-      </p>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-        active
-          ? "border-[color:var(--navy)] bg-[color:var(--navy)] text-white"
-          : "border-slate-300 bg-white text-slate-600"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Row({ k, v, link }: { k: string; v: string; link?: boolean }) {
-  return (
-    <div className="flex gap-2">
-      <dt className="min-w-36 font-semibold text-slate-500">{k}</dt>
-      <dd className="break-all text-slate-800">
-        {link ? (
-          <a href={v} target="_blank" rel="noreferrer" className="text-[color:var(--blue)] underline">
-            {v}
-          </a>
-        ) : (
-          v
-        )}
-      </dd>
-    </div>
-  );
-}
-
-function Extracted({ label, items }: { label: string; items?: string[] }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-      <span className="font-semibold text-[color:var(--navy)]">{label}: </span>
-      <span className="font-mono text-slate-700">{items.join(", ")}</span>
+    <div className="evidence-panel heatmap-panel">
+      <div className="panel-header"><strong>tamper map</strong><span>{tamperMap.changedCells} REGIONS</span></div>
+      <div className="heatmap-canvas"><canvas ref={canvasRef} /></div>
     </div>
   );
 }

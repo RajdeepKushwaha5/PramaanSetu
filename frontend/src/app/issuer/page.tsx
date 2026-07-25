@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiUrl } from "@/lib/api";
 
 interface Issuer {
@@ -10,6 +10,8 @@ interface Issuer {
   sebiRegNo: string;
   entityClass: string;
   validUpiHandles: string[];
+  trustLevel?: "demo" | "validated";
+  registrationSource?: string | null;
 }
 
 interface SignResult {
@@ -18,17 +20,17 @@ interface SignResult {
   mediaType: string;
   contentHash: string;
   signature: string;
-  manifest: unknown;
+  manifest: {
+    publishedAt?: string;
+    issuer?: { name?: string; sebiRegNo?: string };
+  };
   transparencyLog: { seq: number; entryHash: string };
 }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1] ?? "");
-    };
+    reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -45,28 +47,32 @@ export default function IssuerPage() {
   const [result, setResult] = useState<SignResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadIssuers() {
+  const loadIssuers = useCallback(async () => {
     try {
-      const res = await fetch(apiUrl("/api/issuers"));
-      const data = (await res.json()) as Issuer[];
+      const response = await fetch(apiUrl("/api/issuers"));
+      if (!response.ok) throw new Error("Issuer registry unavailable");
+      const data = (await response.json()) as Issuer[];
       setIssuers(data);
-      if (data.length && !issuerId) setIssuerId(data[0].id);
+      setIssuerId((current) => current || data[0]?.id || "");
     } catch {
-      setError("Cannot reach backend. Is it running on port 4000?");
+      setError("Cannot reach the signing service.");
     }
-  }
+  }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadIssuers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timer = window.setTimeout(() => void loadIssuers(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadIssuers]);
 
   async function seed() {
     setBusy(true);
+    setError(null);
     try {
-      await fetch(apiUrl("/api/seed"), { method: "POST" });
+      const response = await fetch(apiUrl("/api/seed"), { method: "POST" });
+      if (!response.ok) throw new Error("Demo registry could not be seeded");
       await loadIssuers();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -85,14 +91,14 @@ export default function IssuerPage() {
         body.content = await fileToBase64(file);
         body.mimeType = file.type || "application/octet-stream";
       }
-      const res = await fetch(apiUrl("/api/sign"), {
+      const response = await fetch(apiUrl("/api/sign"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) setError(data.error || "Signing failed");
-      else setResult(data);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Signing failed");
+      setResult(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -100,172 +106,191 @@ export default function IssuerPage() {
     }
   }
 
+  const selected = issuers.find((issuer) => issuer.id === issuerId);
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/" className="text-sm text-[color:var(--blue)] underline">
-        ← Back
-      </Link>
-      <h1 className="mt-4 text-3xl font-extrabold text-[color:var(--navy)]">
-        Issuer Signing Portal
-      </h1>
-      <p className="mt-2 text-slate-600">
-        Sign an official communication so investors can prove it is genuine.
-        Signed with Ed25519, tied to the issuer&apos;s SEBI registration, and
-        anchored in the transparency log.
-      </p>
-
-      {issuers.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4">
-          <p className="text-sm text-amber-900">
-            No issuers yet. Load the demo issuers (SEBI, NSE, Reliance) and
-            sample signed documents.
-          </p>
-          <button
-            onClick={seed}
-            disabled={busy}
-            className="mt-3 rounded-lg bg-[color:var(--navy)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {busy ? "Seeding..." : "Seed demo data"}
-          </button>
+    <main className="page issuer-page">
+      <section className="page-intro">
+        <div className="page-intro-index">
+          <strong>01</strong>
+          <div><span>ISSUER SURFACE</span><span>PROVENANCE ORIGIN</span></div>
         </div>
-      ) : (
-        <div className="mt-6 space-y-4">
-          <Field label="Issuer">
-            <select
-              value={issuerId}
-              onChange={(e) => setIssuerId(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm"
-            >
-              {issuers.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name} ({i.sebiRegNo})
-                </option>
-              ))}
-            </select>
-          </Field>
+        <div className="page-intro-copy">
+          <p className="eyebrow">SIGNING RAIL / AUTHENTIC COMMUNICATIONS</p>
+          <h1 className="page-title">
+            make the genuine
+            <span className="muted"> cryptographically obvious.</span>
+          </h1>
+          <p className="page-lede">
+            Register an official communication before distribution. Every record
+            is content-bound, issuer-signed, and linked into the transparency chain.
+          </p>
+        </div>
+      </section>
 
-          <Field label="Title of communication">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Q1 Results Announcement"
-              className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm"
-            />
-          </Field>
+      <section className="signing-workspace">
+        <aside className="signing-steps">
+          <div className="panel-header">
+            <strong>signing protocol</strong>
+            <span>04 STEPS</span>
+          </div>
+          {[
+            ["01", "Select issuer", "Choose the identity whose key signs the claim."],
+            ["02", "Attach content", "Supply the exact text, document, image, or video."],
+            ["03", "Create binding", "Hash content and generate perceptual fingerprints."],
+            ["04", "Publish proof", "Sign the manifest and append the registry record."],
+          ].map(([n, title, copy], index) => (
+            <div className={`signing-step ${index < 2 ? "active" : ""}`} key={n}>
+              <span>{n}</span>
+              <div><strong>{title}</strong><p>{copy}</p></div>
+            </div>
+          ))}
+          <div className="prototype-notice">
+            <span className="tag orange">PROTOTYPE CONTROL</span>
+            <p>Production issuers should authenticate with issuer-bound credentials and HSM-held keys.</p>
+          </div>
+        </aside>
 
-          <div className="flex gap-2">
-            <TabButton active={mode === "file"} onClick={() => setMode("file")}>
-              Upload file (image / video)
-            </TabButton>
-            <TabButton active={mode === "text"} onClick={() => setMode("text")}>
-              Text communication
-            </TabButton>
+        <div className="signing-form">
+          <div className="signing-form-head">
+            <div>
+              <span className="micro-label">NEW PROVENANCE RECORD</span>
+              <h2>sign communication</h2>
+            </div>
+            <span className="record-status"><i /> DRAFT</span>
           </div>
 
-          {mode === "file" ? (
-            <input
-              type="file"
-              accept="image/*,video/*,application/pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm"
-            />
+          {issuers.length === 0 ? (
+            <div className="seed-state">
+              <div className="seed-glyph">＋</div>
+              <h3>No issuer registry loaded</h3>
+              <p>Load the isolated SEBI, NSE, and listed-company demo identities.</p>
+              <button className="button primary" onClick={seed} disabled={busy}>
+                {busy ? "initialising…" : "initialise demo registry"} →
+              </button>
+            </div>
           ) : (
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={4}
-              placeholder="Paste the official announcement text..."
-              className="w-full rounded-lg border border-slate-300 bg-white p-3 text-sm"
-            />
+            <div className="signing-form-body">
+              <label className="field">
+                <span>01 / issuer identity</span>
+                <select className="form-control" value={issuerId} onChange={(e) => setIssuerId(e.target.value)}>
+                  {issuers.map((issuer) => (
+                    <option key={issuer.id} value={issuer.id}>
+                      {issuer.name} / {issuer.sebiRegNo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {selected && (
+                <div className="issuer-identity-card">
+                  <div className="issuer-monogram">{selected.name.slice(0, 2).toUpperCase()}</div>
+                  <div>
+                    <strong>{selected.name}</strong>
+                    <span>{selected.entityClass.replace("_", " ")} · {selected.sebiRegNo}</span>
+                  </div>
+                  <span className={`tag ${selected.trustLevel === "validated" ? "green" : "orange"}`}>
+                    {selected.trustLevel ?? "demo"}
+                  </span>
+                </div>
+              )}
+
+              <label className="field">
+                <span>02 / communication title</span>
+                <input
+                  className="form-control"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Investor advisory / Q1 results / circular"
+                />
+              </label>
+
+              <div className="field">
+                <span>03 / content payload</span>
+                <div className="tabs">
+                  <button className={mode === "file" ? "active" : ""} onClick={() => setMode("file")}>media / document</button>
+                  <button className={mode === "text" ? "active" : ""} onClick={() => setMode("text")}>text notice</button>
+                </div>
+              </div>
+
+              {mode === "file" ? (
+                <label className="compact-upload">
+                  <input type="file" accept="image/*,video/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <span>⌁</span>
+                  <div>
+                    <strong>{file?.name ?? "select content to bind"}</strong>
+                    <p>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB · ${file.type || "binary"}` : "PNG · JPG · WEBP · MP4 · PDF"}</p>
+                  </div>
+                  <b>BROWSE</b>
+                </label>
+              ) : (
+                <textarea
+                  className="form-control"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Enter the exact official communication…"
+                />
+              )}
+
+              <div className="sign-action-row">
+                <div>
+                  <span className="micro-label">OUTPUT</span>
+                  <p>manifest + signature + log receipt</p>
+                </div>
+                <button
+                  className="button primary"
+                  onClick={sign}
+                  disabled={busy || !issuerId || !title.trim() || (mode === "text" ? !text.trim() : !file)}
+                >
+                  {busy ? "creating proof…" : "sign & register"} →
+                </button>
+              </div>
+            </div>
           )}
-
-          <button
-            onClick={sign}
-            disabled={busy || !title || (mode === "text" ? !text : !file)}
-            className="rounded-lg bg-[color:var(--accent)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {busy ? "Signing..." : "Sign & register"}
-          </button>
+          {error && <div className="error-box signing-error">{error}</div>}
         </div>
-      )}
+      </section>
 
-      {error && (
-        <div className="mt-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-          {error}
+      <section className="receipt-region">
+        <div className="result-region-heading">
+          <span className="micro-label">SIGNED RECORD / RECEIPT</span>
+          <span>{result ? "COMMITTED" : "NO RECORD YET"}</span>
         </div>
-      )}
-
-      {result && (
-        <div className="mt-8 rounded-lg border border-green-300 bg-green-50 p-5">
-          <div className="text-lg font-bold text-green-900">
-            ✓ Signed & registered
+        {result ? <SigningReceipt result={result} selected={selected} /> : (
+          <div className="receipt-empty">
+            <span>manifest://awaiting-content</span>
+            <p>The cryptographic receipt will appear after signing.</p>
           </div>
-          <dl className="mt-3 space-y-2 text-sm">
-            <Row k="Title" v={result.title} />
-            <Row k="Media type" v={result.mediaType} />
-            <Row k="Content hash (SHA-256)" v={result.contentHash} mono />
-            <Row k="Signature (Ed25519)" v={`${result.signature.slice(0, 40)}…`} mono />
-            <Row
-              k="Transparency log"
-              v={`seq #${result.transparencyLog.seq} · ${result.transparencyLog.entryHash.slice(0, 24)}…`}
-              mono
-            />
-          </dl>
-          <p className="mt-3 text-xs text-green-800">
-            Any forwarded copy of this communication can now be verified. Try it
-            on the{" "}
-            <Link href="/verify" className="underline">
-              verifier
-            </Link>
-            .
-          </p>
-        </div>
-      )}
+        )}
+      </section>
     </main>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function SigningReceipt({ result, selected }: { result: SignResult; selected?: Issuer }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-semibold text-[color:var(--navy)]">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-lg border px-3 py-1.5 text-sm font-medium ${
-        active
-          ? "border-[color:var(--navy)] bg-[color:var(--navy)] text-white"
-          : "border-slate-300 bg-white text-slate-600"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
-  return (
-    <div className="flex gap-2">
-      <dt className="min-w-40 font-semibold text-slate-500">{k}</dt>
-      <dd className={`text-slate-800 ${mono ? "break-all font-mono text-xs" : ""}`}>
-        {v}
-      </dd>
+    <div className="signing-receipt">
+      <div className="receipt-success">
+        <div className="receipt-check">✓</div>
+        <div>
+          <span>PROVENANCE COMMITTED</span>
+          <h2>{result.title}</h2>
+          <p>Content can now be matched against this issuer-signed record.</p>
+        </div>
+        <Link href="/verify" className="button">verify a copy →</Link>
+      </div>
+      <dl>
+        <ReceiptRow label="asset id" value={result.assetId} />
+        <ReceiptRow label="issuer" value={selected?.name ?? result.manifest.issuer?.name ?? "—"} />
+        <ReceiptRow label="media type" value={result.mediaType.toUpperCase()} />
+        <ReceiptRow label="content hash" value={result.contentHash} />
+        <ReceiptRow label="ed25519 signature" value={result.signature} />
+        <ReceiptRow label="transparency log" value={`SEQ ${result.transparencyLog.seq.toString().padStart(4, "0")} / ${result.transparencyLog.entryHash}`} />
+      </dl>
     </div>
   );
+}
+
+function ReceiptRow({ label, value }: { label: string; value: string }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
 }
