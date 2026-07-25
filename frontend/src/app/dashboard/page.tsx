@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
 
 interface Count { value: string; count: number }
@@ -37,11 +37,21 @@ interface Campaign {
   lastSeen?: string;
 }
 
+type FilterType = "upi" | "phone" | "entity";
+interface Filter { type: FilterType; value: string }
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [activeNav, setActiveNav] = useState("campaigns");
+  const [filter, setFilter] = useState<Filter | null>(null);
+
+  const campaignsRef = useRef<HTMLDivElement>(null);
+  const upiRef = useRef<HTMLDivElement>(null);
+  const entitiesRef = useRef<HTMLDivElement>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +78,34 @@ export default function DashboardPage() {
     };
   }, [load]);
 
+  function goTo(id: string, ref: React.RefObject<HTMLDivElement | null>) {
+    setActiveNav(id);
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function applyFilter(type: FilterType, value: string) {
+    setFilter((prev) => (prev?.type === type && prev.value === value ? null : { type, value }));
+    setActiveNav("campaigns");
+    campaignsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function matchesFilter(c: Campaign): boolean {
+    if (!filter) return true;
+    if (filter.type === "upi") return c.paymentHandles.includes(filter.value);
+    if (filter.type === "phone") return c.phoneNumbers.includes(filter.value);
+    return c.entities.includes(filter.value);
+  }
+
+  const visibleCampaigns = campaigns.filter(matchesFilter);
+
+  const NAV: { id: string; icon: string; label: string; count: number; ref: React.RefObject<HTMLDivElement | null> }[] = [
+    { id: "campaigns", icon: "◫", label: "Campaigns", count: campaigns.length, ref: campaignsRef },
+    { id: "upi", icon: "⌁", label: "UPI handles", count: stats?.topPaymentHandles.length ?? 0, ref: upiRef },
+    { id: "entities", icon: "◇", label: "Entities", count: stats?.topImpersonatedEntities.length ?? 0, ref: entitiesRef },
+    { id: "phone", icon: "◉", label: "Phone graph", count: stats?.topPhoneNumbers.length ?? 0, ref: phoneRef },
+    { id: "evidence", icon: "≡", label: "Evidence", count: stats?.totals.totalVerifications ?? 0, ref: campaignsRef },
+  ];
+
   return (
     <main className="page dashboard-page">
       <section className="page-intro">
@@ -83,7 +121,8 @@ export default function DashboardPage() {
           </h1>
           <p className="page-lede">
             Fraud submissions become linked campaigns through shared entities,
-            payment handles, phone numbers, and domains—ready for human review.
+            payment handles, phone numbers, and domains. Click any indicator to
+            trace every campaign that shares it.
           </p>
         </div>
       </section>
@@ -117,16 +156,15 @@ export default function DashboardPage() {
             </span>
             <div><strong>SUPTECH</strong><span>FRAUD RADAR</span></div>
           </div>
-          {[
-            ["◫", "Campaigns", campaigns.length.toString().padStart(2, "0"), true],
-            ["⌁", "UPI handles", stats?.topPaymentHandles.length ?? 0, false],
-            ["◇", "Entities", stats?.topImpersonatedEntities.length ?? 0, false],
-            ["◉", "Phone graph", stats?.topPhoneNumbers.length ?? 0, false],
-            ["≡", "Evidence", stats?.totals.totalVerifications ?? 0, false],
-          ].map(([icon, label, count, active]) => (
-            <div className={`radar-nav-item ${active ? "active" : ""}`} key={String(label)}>
-              <span>{icon}</span><strong>{label}</strong><b>{count}</b>
-            </div>
+          {NAV.map((item) => (
+            <button
+              type="button"
+              className={`radar-nav-item ${activeNav === item.id ? "active" : ""}`}
+              key={item.id}
+              onClick={() => goTo(item.id, item.ref)}
+            >
+              <span>{item.icon}</span><strong>{item.label}</strong><b>{item.count}</b>
+            </button>
           ))}
           <div className="integrity-block">
             <span>TRANSPARENCY CHAIN</span>
@@ -137,11 +175,11 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        <div className="campaign-workspace">
+        <div className="campaign-workspace" ref={campaignsRef}>
           <div className="campaign-toolbar">
             <div>
               <span className="micro-label">ACTIVE CAMPAIGNS</span>
-              <strong>{campaigns.length.toString().padStart(2, "0")} / PRIORITY QUEUE</strong>
+              <strong>{visibleCampaigns.length.toString().padStart(2, "0")} / PRIORITY QUEUE</strong>
             </div>
             <div className="toolbar-legend">
               <span><i className="red" /> confirmed</span>
@@ -149,16 +187,26 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {campaigns.length === 0 ? (
+          {filter && (
+            <div className="filter-banner">
+              <span>
+                Filtered by {filter.type === "upi" ? "UPI handle" : filter.type === "phone" ? "phone" : "entity"}:
+                {" "}<b>{filter.value}</b>
+              </span>
+              <button type="button" onClick={() => setFilter(null)}>clear ✕</button>
+            </div>
+          )}
+
+          {visibleCampaigns.length === 0 ? (
             <div className="campaign-empty">
               <div className="radar-scope"><i /><i /><i /></div>
-              <strong>NO ACTIVE FRAUD CAMPAIGNS</strong>
-              <p>Verify a scam message or altered document to populate the intelligence graph.</p>
+              <strong>{filter ? "NO CAMPAIGNS SHARE THIS INDICATOR" : "NO ACTIVE FRAUD CAMPAIGNS"}</strong>
+              <p>{filter ? "Try clearing the filter." : "Verify a scam message or altered document to populate the intelligence graph."}</p>
             </div>
           ) : (
             <div className="campaign-list">
-              {campaigns.map((campaign, index) => (
-                <CampaignCard campaign={campaign} index={index} key={campaign.id} />
+              {visibleCampaigns.map((campaign, index) => (
+                <CampaignCard campaign={campaign} index={index} key={campaign.id} onIndicator={applyFilter} filter={filter} />
               ))}
             </div>
           )}
@@ -169,13 +217,13 @@ export default function DashboardPage() {
         <div className="section-heading compact">
           <div>
             <p className="eyebrow">INDICATOR INDEX / OBSERVED</p>
-            <h2>campaign infrastructure.<br /><span>ranked by recurrence.</span></h2>
+            <h2>campaign infrastructure.<br /><span>click to trace linked campaigns.</span></h2>
           </div>
         </div>
         <div className="indicator-lists">
-          <TopList title="payment handles" code="UPI" items={stats?.topPaymentHandles ?? []} />
-          <TopList title="phone numbers" code="TEL" items={stats?.topPhoneNumbers ?? []} />
-          <TopList title="impersonated entities" code="ENT" items={stats?.topImpersonatedEntities ?? []} />
+          <TopList title="payment handles" code="UPI" items={stats?.topPaymentHandles ?? []} onPick={(v) => applyFilter("upi", v)} filter={filter} type="upi" innerRef={upiRef} />
+          <TopList title="phone numbers" code="TEL" items={stats?.topPhoneNumbers ?? []} onPick={(v) => applyFilter("phone", v)} filter={filter} type="phone" innerRef={phoneRef} />
+          <TopList title="impersonated entities" code="ENT" items={stats?.topImpersonatedEntities ?? []} onPick={(v) => applyFilter("entity", v)} filter={filter} type="entity" innerRef={entitiesRef} />
           <VerdictList items={stats?.verdictBreakdown ?? {}} />
         </div>
       </section>
@@ -193,7 +241,7 @@ function RadarStat({ label, value, sub, tone }: { label: string; value?: number;
   );
 }
 
-function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }) {
+function CampaignCard({ campaign, index, onIndicator, filter }: { campaign: Campaign; index: number; onIndicator: (t: FilterType, v: string) => void; filter: Filter | null }) {
   const entity = campaign.entities.join(" / ") || "Unattributed campaign";
   return (
     <article className={`campaign-card ${campaign.severity}`}>
@@ -216,8 +264,8 @@ function CampaignCard({ campaign, index }: { campaign: Campaign; index: number }
           <Metric label="shared links" value={campaign.linkingIndicators.length} />
         </div>
         <div className="campaign-indicators">
-          <IndicatorLine label="UPI" values={campaign.paymentHandles} />
-          <IndicatorLine label="PHONE" values={campaign.phoneNumbers} />
+          <IndicatorLine label="UPI" values={campaign.paymentHandles} onPick={(v) => onIndicator("upi", v)} filter={filter} type="upi" />
+          <IndicatorLine label="PHONE" values={campaign.phoneNumbers} onPick={(v) => onIndicator("phone", v)} filter={filter} type="phone" />
           <IndicatorLine label="DOMAIN" values={campaign.domains} />
           <IndicatorLine label="LINKED BY" values={campaign.linkingIndicators} />
         </div>
@@ -235,21 +283,48 @@ function Metric({ label, value }: { label: string; value: number }) {
   return <div><span>{label}</span><strong>{value.toString().padStart(2, "0")}</strong></div>;
 }
 
-function IndicatorLine({ label, values }: { label: string; values: string[] }) {
-  return <div><span>{label}</span><p>{values.join(" · ") || "—"}</p></div>;
+function IndicatorLine({ label, values, onPick, filter, type }: { label: string; values: string[]; onPick?: (v: string) => void; filter?: Filter | null; type?: FilterType }) {
+  if (!values.length) return <div><span>{label}</span><p>—</p></div>;
+  return (
+    <div>
+      <span>{label}</span>
+      <p>
+        {values.map((v, i) => {
+          const active = filter && type && filter.type === type && filter.value === v;
+          return (
+            <span key={v}>
+              {i > 0 && " · "}
+              {onPick ? (
+                <button type="button" className={`indicator-chip ${active ? "active" : ""}`} onClick={() => onPick(v)}>{v}</button>
+              ) : v}
+            </span>
+          );
+        })}
+      </p>
+    </div>
+  );
 }
 
-function TopList({ title, code, items }: { title: string; code: string; items: Count[] }) {
+function TopList({ title, code, items, onPick, filter, type, innerRef }: { title: string; code: string; items: Count[]; onPick?: (v: string) => void; filter?: Filter | null; type?: FilterType; innerRef?: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div className="toplist-panel">
+    <div className="toplist-panel" ref={innerRef}>
       <div className="panel-header"><strong>{title}</strong><span>{code}</span></div>
-      {items.length ? items.slice(0, 6).map((item, i) => (
-        <div className="toplist-row" key={item.value}>
-          <span>{(i + 1).toString().padStart(2, "0")}</span>
-          <strong>{item.value}</strong>
-          <b>{item.count}</b>
-        </div>
-      )) : <div className="empty-state">No indicators observed</div>}
+      {items.length ? items.slice(0, 6).map((item, i) => {
+        const active = filter && type && filter.type === type && filter.value === item.value;
+        return (
+          <button
+            type="button"
+            className={`toplist-row ${onPick ? "clickable" : ""} ${active ? "active" : ""}`}
+            key={item.value}
+            onClick={onPick ? () => onPick(item.value) : undefined}
+            disabled={!onPick}
+          >
+            <span>{(i + 1).toString().padStart(2, "0")}</span>
+            <strong>{item.value}</strong>
+            <b>{item.count}</b>
+          </button>
+        );
+      }) : <div className="empty-state">No indicators observed</div>}
     </div>
   );
 }
@@ -259,7 +334,7 @@ function VerdictList({ items }: { items: Record<string, number> }) {
     <div className="toplist-panel">
       <div className="panel-header"><strong>verdict distribution</strong><span>STATE</span></div>
       {Object.keys(items).length ? Object.entries(items).map(([label, count], i) => (
-        <div className="toplist-row" key={label}>
+        <div className="toplist-row static" key={label}>
           <span>{(i + 1).toString().padStart(2, "0")}</span>
           <strong>{label.replaceAll("_", " ")}</strong>
           <b>{count}</b>

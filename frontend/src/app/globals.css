@@ -3246,3 +3246,88 @@ textarea.form-control {
 .demo-sample.danger i {
   background: var(--red);
 }
+
+/* ---- interactive dashboard (radar) ---- */
+button.radar-nav-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+button.radar-nav-item:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+button.toplist-row {
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  font-family: inherit;
+  transition: background 0.12s ease;
+}
+button.toplist-row.clickable {
+  cursor: pointer;
+}
+button.toplist-row.clickable:hover {
+  background: var(--surface-2);
+}
+button.toplist-row.active {
+  background: var(--surface-3);
+  border-left: 2px solid var(--blue);
+}
+
+.filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--blue);
+  border-radius: 8px;
+  background: var(--blue-soft);
+  font-size: 11px;
+  color: var(--muted);
+}
+.filter-banner b {
+  color: var(--ink);
+  font-family: var(--font-geist-mono), monospace;
+}
+.filter-banner button {
+  flex: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 600;
+}
+
+.indicator-chip {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--blue);
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.indicator-chip:hover {
+  color: var(--ink);
+}
+.indicator-chip.active {
+  color: var(--ink);
+  text-decoration-style: solid;
+}
+
