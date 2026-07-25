@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Builds / generated
+.next/
+dist/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Runtime data (local JSON store)
+data/
+backend/data/
+
+# Secrets & environment (keep *.env.example templates)
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Agent / assistant scratch files
+CLAUDE.md
+AGENTS.md
+.claude/

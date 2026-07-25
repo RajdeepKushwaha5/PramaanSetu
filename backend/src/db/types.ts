@@ -1,0 +1,108 @@
+/** Shared data types for the PramaanSetu store. */
+
+export type EntityClass =
+  | "sebi"
+  | "exchange"
+  | "depository"
+  | "listed_company"
+  | "broker"
+  | "investment_adviser";
+
+export type MediaType = "image" | "video" | "audio" | "pdf" | "text";
+
+export type Verdict =
+  | "original" // exact signed match, valid signature
+  | "derivative" // perceptual match, visually identical (compressed/re-encoded)
+  | "altered" // perceptual match to a signed asset but content differs
+  | "invalid_provenance" // matched a record whose signature does NOT validate
+  | "revoked" // matched a signed asset that was revoked
+  | "expired" // matched a signed asset past its validity
+  | "unverified"; // no provenance match
+
+/** How much the issuer identity itself can be trusted. */
+export type TrustLevel =
+  | "demo" // key generated inside PramaanSetu for demo purposes only
+  | "validated"; // identity checked against a SEBI-registration allowlist source
+
+export interface Issuer {
+  id: string;
+  name: string;
+  sebiRegNo: string;
+  entityClass: EntityClass;
+  publicKey: string; // base64 SPKI (Ed25519)
+  privateKey: string; // base64 PKCS8 — PROTOTYPE ONLY (prod: HSM/KMS)
+  validUpiHandles: string[];
+  trustLevel: TrustLevel;
+  registrationSource: string | null; // URL of the SEBI-registration record
+  createdAt: string;
+}
+
+/**
+ * C2PA-inspired provenance manifest that gets signed. This is NOT a conformant
+ * C2PA manifest store (no standardized assertions/claims or content bindings);
+ * it is a signed JSON claim over the content hash and issuer identity.
+ */
+export interface Manifest {
+  issuer: {
+    id: string;
+    name: string;
+    sebiRegNo: string;
+    entityClass: EntityClass;
+    trustLevel: TrustLevel;
+  };
+  title: string;
+  mediaType: MediaType;
+  contentHash: string; // sha256 hex of the exact bytes/text
+  publishedAt: string;
+  expiresAt: string | null;
+  approvedPaymentHandles: string[];
+  authoritativeUrl: string | null;
+}
+
+export interface SignedAsset {
+  id: string;
+  issuerId: string;
+  title: string;
+  mediaType: MediaType;
+  mimeType: string;
+  contentHash: string;
+  perceptualHashes: string[]; // image: 1 hash; video: per-keyframe hashes
+  manifest: Manifest;
+  signature: string; // base64 Ed25519 over canonical manifest JSON
+  publishedAt: string;
+  expiresAt: string | null;
+  revoked: boolean;
+  logSeq: number;
+}
+
+export interface LogEntry {
+  seq: number;
+  timestamp: string;
+  assetId: string;
+  contentHash: string;
+  prevHash: string;
+  entryHash: string;
+}
+
+export interface VerificationEvent {
+  id: string;
+  timestamp: string;
+  verdict: Verdict;
+  mediaType: MediaType;
+  matchedAssetId: string | null;
+  matchedIssuerName: string | null;
+  // Fraud-clustering fields (populated for altered / unverified):
+  impersonatedEntity: string | null;
+  paymentHandles: string[];
+  phoneNumbers: string[];
+  urls: string[];
+  riskLevel: string | null;
+  riskScore: number | null;
+}
+
+export interface DbShape {
+  issuers: Issuer[];
+  assets: SignedAsset[];
+  log: LogEntry[];
+  events: VerificationEvent[];
+}
