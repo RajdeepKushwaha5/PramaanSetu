@@ -3374,4 +3374,74 @@ button.toplist-row.active {
   margin: 4px 0;
 }
 
+/* ---- cryptographic trust chain (verify result) ---- */
+.trust-chain {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.trust-chain .panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.chain-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.chain-step {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.chain-step .chain-idx {
+  font-size: 10px;
+  color: var(--faint);
+}
+.chain-step .chain-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.chain-step.ok .chain-mark {
+  background: var(--green);
+}
+.chain-step.bad .chain-mark {
+  background: var(--red);
+}
+.chain-step strong {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.chain-step p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.chain-step.bad p {
+  color: var(--red);
+}
+@media (max-width: 720px) {
+  .chain-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 

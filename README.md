@@ -146,11 +146,39 @@ Latest local run:
 | Latency p50 | 35.4 ms |
 | Latency p95 | 72.0 ms |
 
-The benchmark uses Jimp-generated templates, recompression, QR replacement,
-and simple visual edits. It is useful as a regression check, not as a general
-accuracy claim. It does not represent WhatsApp or Telegram forwarding,
-screenshots, rotations, crops, real exchange documents, adversarial edits, or
-different camera conditions.
+The benchmark above uses Jimp-generated templates and re-compression. It is a
+regression check, not a general accuracy claim.
+
+### Realistic transforms
+
+A second benchmark applies the transforms a forwarded image actually goes
+through and reports how often the genuine copy is still recognised
+(`original`/`derivative`):
+
+```bash
+npm run benchmark:real
+```
+
+Latest local run (12 signed circulars, AI disabled):
+
+| Transform | Recognised |
+| --- | ---: |
+| Heavy JPEG (q30) | 100% |
+| WhatsApp-like JPEG (q50) | 100% |
+| JPEG q70 | 100% |
+| Screenshot (down + up resample) | 100% |
+| Scale 85% | 100% |
+| Crop 5% border | 0% |
+| Rotate 2° | 0% |
+| False match on unrelated images | 0% |
+
+**Honest read:** the block-average fingerprint is robust to the most common
+real-world forwards — re-compression, screenshots, and scaling — and produces
+no false matches, but it is not geometry-invariant, so cropped or rotated
+forwards are not recognised. Production would add feature/keypoint-based
+matching (e.g. ORB) for those cases. This is a synthetic-content benchmark; a
+held-out set from real WhatsApp/Telegram forwarding and camera photos is still
+future work.
 
 ### Scalability
 
@@ -192,7 +220,7 @@ Run the backend test suite from the repository root:
 npm test
 ```
 
-The current suite contains nine tests covering:
+The current suite contains 14 tests covering:
 
 - exact signed images and text
 - recompressed image matching
@@ -395,6 +423,15 @@ JSON database. Production keys should be held in an HSM or KMS. The signing
 flow also needs authenticated issuer accounts, key rotation, audit access
 controls, and constant-time secret comparison.
 
+**Dependency audit.** The backend production dependency audit is clean
+(`npm --prefix backend audit --omit=dev` reports 0 vulnerabilities) — the
+Telegram bot talks to the Bot API directly over `fetch`, avoiding heavy client
+libraries. The frontend reports a high-severity PostCSS advisory that is
+**bundled transitively inside Next.js's own build toolchain**
+(`next/node_modules/postcss`); it affects the build step, not the served
+runtime, and the only offered "fix" downgrades Next.js to v9 (a breaking
+change). It will clear with a future Next.js release rather than a local change.
+
 ## Deployment
 
 The project is not publicly deployed.
@@ -413,17 +450,30 @@ The frontend and backend are separate services:
 There is no CI/CD workflow in the repository yet. Tests, type checks, linting,
 and the production frontend build currently need to be run manually.
 
-## Known limitations and next work
+## Path to production
 
-- Build a held-out benchmark from real WhatsApp and Telegram forwarding paths.
-- Add PDF page rendering, embedded QR inspection, and document-level tamper maps.
-- Implement audio fingerprints and stronger video evaluation.
-- Replace the signed JSON claim with a conformant C2PA implementation.
-- Validate issuer identity against authoritative SEBI and exchange sources.
-- Move issuer keys to HSM or KMS storage.
-- Replace JSON persistence with PostgreSQL and an indexed fingerprint store.
-- Add authenticated regulator and issuer accounts with role-based access.
-- Add CI/CD, production monitoring, retention rules, and incident audit trails.
+The prototype proves the *idea and the mechanism*; production must prove the
+*trust chain*. The honest boundaries, and how each is closed for production:
+
+| Prototype today | Production |
+| --- | --- |
+| Issuer identity is a pre-approved demo record | Validate identity against authoritative SEBI / exchange registries; issuer onboarding + approval |
+| Private keys stored in the local JSON store | Keys held in HSM / KMS; the app stores only key ids, public keys, and status |
+| Evidence signed by a locally-generated key | Anchor evidence to a regulator-controlled key / certificate chain |
+| Hash-chain transparency log (internal) | Publish log roots as a Merkle tree for independent, third-party verification |
+| JSON file store + in-memory LSH index | PostgreSQL + pgvector / FAISS, object storage, worker queues, Redis |
+| Synthetic + realistic-transform benchmark | Held-out benchmark from real WhatsApp/Telegram forwarding and camera photos |
+| Ed25519-signed JSON manifest | Conformant C2PA manifest store |
+
+None of these change the architecture — they are well-understood swaps. The
+signing rail, verdict engine, campaign graph, and evidence flow stay as they are.
+
+### Already built (beyond the original plan)
+
+Image, PDF (page rendering + QR extraction), video (frame fingerprinting), and
+audio (voice-clone / audio-replacement) verification; QR payment-tamper
+detection; a tamper heatmap; issuer revocation; a stable-ID campaign graph;
+signed evidence export; a Telegram channel; and an LSH scalability index.
 
 ## Technology
 

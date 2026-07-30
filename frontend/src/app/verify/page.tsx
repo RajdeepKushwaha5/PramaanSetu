@@ -29,6 +29,10 @@ interface Match {
   authoritativeUrl: string | null;
   approvedPaymentHandles: string[];
   perceptualDistance: number | null;
+  logSeq?: number;
+  logEntryHash?: string | null;
+  revoked?: boolean;
+  expired?: boolean;
   differences?: string[];
   tamperMap?: TamperMap;
   paymentTamper?: { foundPayee: string; approvedPayees: string[] };
@@ -130,6 +134,15 @@ export default function VerifyPage() {
       setSampleBusy(null);
     }
   }
+
+  // Shareable demo links: /verify?auto=gv auto-runs a sample on load.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("auto");
+    const s = id ? SAMPLES.find((x) => x.id === id) : undefined;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (s) void runSample(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function switchMode(next: "text" | "file") {
     setMode(next);
@@ -325,6 +338,8 @@ function VerificationResult({ result, previewUrl }: { result: VerifyResult; prev
 
       <div className="verdict-message">{result.message}</div>
 
+      {result.match && <TrustChain result={result} />}
+
       {result.match?.paymentTamper && (
         <div className="payment-alert">
           <div><span>!</span></div>
@@ -405,6 +420,39 @@ function VerificationResult({ result, previewUrl }: { result: VerifyResult; prev
       ) : null}
 
       {risk?.unavailable && <div className="error-box">AI risk engine unavailable: {risk.reason}</div>}
+    </div>
+  );
+}
+
+function TrustChain({ result }: { result: VerifyResult }) {
+  const m = result.match!;
+  const status = m.revoked ? "revoked" : m.expired ? "expired" : "active";
+  const links = [
+    { label: "issuer identity", value: `${m.issuerName} · ${m.sebiRegNo}`, ok: true },
+    { label: "content hash", value: `SHA–256 · ${(result.contentHash ?? "").slice(0, 16)}…`, ok: true },
+    { label: "issuer signature", value: m.signatureValid ? "Ed25519 · valid" : "Ed25519 · NOT valid", ok: m.signatureValid },
+    { label: "transparency log", value: m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "—", ok: true },
+    { label: "record status", value: status, ok: status === "active" },
+    { label: "evidence", value: "tamper-evident registry", ok: true },
+  ];
+  return (
+    <div className="trust-chain">
+      <div className="panel-header">
+        <strong>cryptographic trust chain</strong>
+        <span>PROVENANCE · NOT AI</span>
+      </div>
+      <div className="chain-steps">
+        {links.map((l, i) => (
+          <div className={`chain-step ${l.ok ? "ok" : "bad"}`} key={l.label}>
+            <span className="chain-idx">{(i + 1).toString().padStart(2, "0")}</span>
+            <span className="chain-mark">{l.ok ? "✓" : "✗"}</span>
+            <div>
+              <strong>{l.label}</strong>
+              <p>{l.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

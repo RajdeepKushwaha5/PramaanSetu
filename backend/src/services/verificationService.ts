@@ -58,6 +58,10 @@ export interface VerifyResult {
     authoritativeUrl: string | null;
     approvedPaymentHandles: string[];
     perceptualDistance: number | null;
+    logSeq: number;
+    logEntryHash: string | null;
+    revoked: boolean;
+    expired: boolean;
     differences?: string[];
     tamperMap?: TamperMap;
     paymentTamper?: { foundPayee: string; approvedPayees: string[] };
@@ -78,6 +82,7 @@ function publicMatch(
 ) {
   const store = getStore();
   const issuer = store.getIssuer(asset.issuerId);
+  const logEntry = store.getLog().find((e) => e.seq === asset.logSeq);
   return {
     assetId: asset.id,
     title: asset.title,
@@ -90,6 +95,10 @@ function publicMatch(
     authoritativeUrl: asset.manifest.authoritativeUrl,
     approvedPaymentHandles: asset.manifest.approvedPaymentHandles,
     perceptualDistance: distance,
+    logSeq: asset.logSeq,
+    logEntryHash: logEntry?.entryHash ?? null,
+    revoked: asset.revoked,
+    expired: isExpired(asset),
   };
 }
 
