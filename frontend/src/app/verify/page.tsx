@@ -222,7 +222,7 @@ export default function VerifyPage() {
               <label className="upload-zone">
                 <input
                   type="file"
-                  accept="image/*,video/*,application/pdf"
+                  accept="image/*,video/*,audio/*,application/pdf"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
                 <span className="upload-glyph">⌁</span>
@@ -338,6 +338,17 @@ function VerificationResult({ result, previewUrl }: { result: VerifyResult; prev
         </div>
       )}
 
+      {result.match?.differences && result.match.differences.length > 0 && (
+        <div className="tamper-notes">
+          <div className="panel-header"><strong>what changed vs the genuine record</strong></div>
+          <ul>
+            {result.match.differences.map((diff, i) => (
+              <li key={i}>{diff}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="evidence-grid">
         {result.match && (
           <div className="evidence-panel">
@@ -348,6 +359,7 @@ function VerificationResult({ result, previewUrl }: { result: VerifyResult; prev
               <EvidenceRow label="record" value={result.match.title} />
               <EvidenceRow label="signature" value={result.match.signatureValid ? "VALID / ED25519" : "NOT VALID"} tone={result.match.signatureValid ? "good" : "bad"} />
               {result.match.perceptualDistance != null && <EvidenceRow label="visual delta" value={`${result.match.perceptualDistance} changed cells`} />}
+              {result.match.registrationSource && <EvidenceRow label="reg. source" value={result.match.registrationSource} href />}
               {result.match.authoritativeUrl && <EvidenceRow label="official source" value={result.match.authoritativeUrl} href />}
             </dl>
           </div>

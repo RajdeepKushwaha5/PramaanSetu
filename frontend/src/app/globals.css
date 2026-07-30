@@ -3352,4 +3352,26 @@ button.toplist-row.active {
   color: var(--red);
 }
 
+/* ---- "what changed" tamper notes (verify page) ---- */
+.tamper-notes {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--orange);
+  border-radius: 8px;
+  background: var(--orange-soft);
+}
+.tamper-notes .panel-header {
+  margin-bottom: 8px;
+}
+.tamper-notes ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.tamper-notes li {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 4px 0;
+}
+
 

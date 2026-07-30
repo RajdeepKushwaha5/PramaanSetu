@@ -256,7 +256,7 @@ export default function IssuerPage() {
 
               {mode === "file" ? (
                 <label className="compact-upload">
-                  <input type="file" accept="image/*,video/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <input type="file" accept="image/*,video/*,audio/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
                   <span>⌁</span>
                   <div>
                     <strong>{file?.name ?? "select content to bind"}</strong>
