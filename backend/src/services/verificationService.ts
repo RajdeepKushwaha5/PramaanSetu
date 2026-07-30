@@ -332,10 +332,14 @@ async function unverified(
     risk = { unavailable: true, reason: "AI risk engine not configured (no Gemini keys)." };
   } else {
     try {
-      const image =
-        input.bytes && mediaType === "image"
-          ? { data: input.bytes.toString("base64"), mimeType: input.mimeType }
-          : undefined;
+      // Give the AI something visual for images and PDFs (render page 1).
+      let image: { data: string; mimeType: string } | undefined;
+      if (input.bytes && mediaType === "image") {
+        image = { data: input.bytes.toString("base64"), mimeType: input.mimeType };
+      } else if (input.bytes && mediaType === "pdf") {
+        const page = await renderPdfFirstPage(input.bytes);
+        if (page) image = { data: page.toString("base64"), mimeType: "image/png" };
+      }
       const assessment = await assessRisk({ text: input.text, image });
       risk = assessment;
       impersonated = assessment.impersonatedEntity;

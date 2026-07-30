@@ -46,7 +46,30 @@ export default function IssuerPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SignResult | null>(null);
+  const [revoked, setRevoked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function revoke() {
+    if (!result) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (issuerKey.trim()) headers["x-issuer-key"] = issuerKey.trim();
+      const response = await fetch(apiUrl("/api/revoke"), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ assetId: result.assetId, revoked: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Revocation failed");
+      setRevoked(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const loadIssuers = useCallback(async () => {
     try {
@@ -83,6 +106,7 @@ export default function IssuerPage() {
     setBusy(true);
     setError(null);
     setResult(null);
+    setRevoked(false);
     try {
       const body: Record<string, unknown> = { issuerId, title };
       if (mode === "text") {
@@ -273,7 +297,9 @@ export default function IssuerPage() {
           <span className="micro-label">SIGNED RECORD / RECEIPT</span>
           <span>{result ? "COMMITTED" : "NO RECORD YET"}</span>
         </div>
-        {result ? <SigningReceipt result={result} selected={selected} /> : (
+        {result ? (
+          <SigningReceipt result={result} selected={selected} revoked={revoked} onRevoke={revoke} busy={busy} />
+        ) : (
           <div className="receipt-empty">
             <span>manifest://awaiting-content</span>
             <p>The cryptographic receipt will appear after signing.</p>
@@ -284,17 +310,28 @@ export default function IssuerPage() {
   );
 }
 
-function SigningReceipt({ result, selected }: { result: SignResult; selected?: Issuer }) {
+function SigningReceipt({ result, selected, revoked, onRevoke, busy }: { result: SignResult; selected?: Issuer; revoked: boolean; onRevoke: () => void; busy: boolean }) {
   return (
-    <div className="signing-receipt">
+    <div className={`signing-receipt ${revoked ? "is-revoked" : ""}`}>
       <div className="receipt-success">
-        <div className="receipt-check">✓</div>
+        <div className="receipt-check">{revoked ? "⦸" : "✓"}</div>
         <div>
-          <span>PROVENANCE COMMITTED</span>
+          <span>{revoked ? "PROVENANCE REVOKED" : "PROVENANCE COMMITTED"}</span>
           <h2>{result.title}</h2>
-          <p>Content can now be matched against this issuer-signed record.</p>
+          <p>
+            {revoked
+              ? "This record is revoked. Verifying this content now returns REVOKED."
+              : "Content can now be matched against this issuer-signed record."}
+          </p>
         </div>
-        <Link href="/verify" className="button">verify a copy →</Link>
+        <div className="receipt-actions">
+          <Link href="/verify" className="button">verify a copy →</Link>
+          {!revoked && (
+            <button type="button" className="button danger" onClick={onRevoke} disabled={busy}>
+              {busy ? "revoking…" : "revoke record"}
+            </button>
+          )}
+        </div>
       </div>
       <dl>
         <ReceiptRow label="asset id" value={result.assetId} />

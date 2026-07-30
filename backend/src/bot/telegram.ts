@@ -13,11 +13,11 @@ import TelegramBot from "node-telegram-bot-api";
 import { verifyAndFormat } from "./verifyReply.js";
 
 const WELCOME =
-  "🛡️ *PramaanSetu Verifier*\n\n" +
-  "Forward me any suspicious securities-market message, image, or PDF and I will tell you whether it is a genuine, signed official communication — or a fake.\n\n" +
-  "• Paste or forward a *message*\n" +
-  "• Send a *photo* (e.g. a circular or screenshot)\n" +
-  "• Send a *PDF* document\n\n" +
+  "🛡️ <b>PramaanSetu Verifier</b>\n\n" +
+  "Forward me any suspicious securities-market message, image, PDF, or video and I will tell you whether it is a genuine, signed official communication — or a fake.\n\n" +
+  "• Paste or forward a <b>message</b>\n" +
+  "• Send a <b>photo</b> (e.g. a circular or screenshot)\n" +
+  "• Send a <b>PDF</b> or <b>video</b>\n\n" +
   "I never say something is safe unless it is cryptographically proven.";
 
 async function downloadFile(bot: TelegramBot, fileId: string): Promise<Buffer> {
@@ -33,7 +33,7 @@ export function startTelegramBot(): boolean {
   const bot = new TelegramBot(token, { polling: true });
 
   bot.onText(/^\/(start|help)/, (msg) => {
-    void bot.sendMessage(msg.chat.id, WELCOME, { parse_mode: "Markdown" });
+    void bot.sendMessage(msg.chat.id, WELCOME, { parse_mode: "HTML" });
   });
 
   bot.on("message", async (msg) => {
@@ -48,6 +48,13 @@ export function startTelegramBot(): boolean {
         const largest = msg.photo[msg.photo.length - 1];
         const bytes = await downloadFile(bot, largest.file_id);
         reply = await verifyAndFormat({ bytes, mimeType: "image/jpeg" });
+      } else if (msg.video) {
+        const bytes = await downloadFile(bot, msg.video.file_id);
+        reply = await verifyAndFormat({ bytes, mimeType: msg.video.mime_type ?? "video/mp4" });
+      } else if (msg.voice || msg.audio) {
+        const a = msg.voice ?? msg.audio!;
+        const bytes = await downloadFile(bot, a.file_id);
+        reply = await verifyAndFormat({ bytes, mimeType: a.mime_type ?? "audio/ogg" });
       } else if (msg.document) {
         const mime = msg.document.mime_type ?? "application/octet-stream";
         const bytes = await downloadFile(bot, msg.document.file_id);
@@ -57,7 +64,7 @@ export function startTelegramBot(): boolean {
       }
 
       if (reply) {
-        await bot.sendMessage(chatId, reply, { parse_mode: "Markdown" });
+        await bot.sendMessage(chatId, reply, { parse_mode: "HTML" });
       } else {
         await bot.sendMessage(
           chatId,

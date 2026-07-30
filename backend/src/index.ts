@@ -10,6 +10,7 @@ import { signRouter } from "./routes/sign.js";
 import { verifyRouter } from "./routes/verify.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { seedRouter } from "./routes/seed.js";
+import { revokeRouter } from "./routes/revoke.js";
 import { startTelegramBot } from "./bot/telegram.js";
 
 const app = express();
@@ -59,6 +60,7 @@ app.use("/api/issuers", issuersRouter);
 app.use("/api/sign", signRouter);
 app.use("/api/verify", verifyRouter);
 app.use("/api/seed", seedRouter);
+app.use("/api/revoke", revokeRouter);
 app.use("/api", campaignsRouter);
 
 app.listen(PORT, () => {

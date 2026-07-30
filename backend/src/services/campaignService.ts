@@ -114,7 +114,6 @@ export function getCampaigns(): Campaign[] {
   });
 
   const campaigns: Campaign[] = [];
-  let id = 1;
   for (const idxs of groups.values()) {
     const evs = idxs.map((i) => events[i]);
     const entities = new Set<string>();
@@ -141,8 +140,11 @@ export function getCampaigns(): Campaign[] {
       }
     }
 
+    // Stable, content-derived ID so /api/evidence/:id links stay valid as the
+    // radar recomputes (instead of a positional counter that reshuffles).
+    const identity = [...entities, ...handles, ...phones, ...domains].sort((a, b) => a.localeCompare(b)).join("|");
     campaigns.push({
-      id: id++,
+      id: stableId(identity),
       severity: confirmed > 0 ? "confirmed" : "suspected",
       eventCount: evs.length,
       confirmedCount: confirmed,
@@ -166,6 +168,16 @@ export function getCampaigns(): Campaign[] {
   );
 }
 
+/** Deterministic positive 31-bit ID from a cluster's indicator identity. */
+function stableId(identity: string): number {
+  let h = 2166136261; // FNV-1a
+  for (let i = 0; i < identity.length; i++) {
+    h ^= identity.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 1) % 1_000_000_000; // positive, bounded
+}
+
 function topCounts(values: string[], limit = 10): { value: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
@@ -182,13 +194,17 @@ export function getDashboardStats() {
   let suspected = 0;
   let lowUnverified = 0;
   let genuine = 0;
+  let revoked = 0;
+  let expired = 0;
   const verdictBreakdown: Record<string, number> = {};
   for (const e of events) {
     const sev = severityOf(e);
     if (sev === "confirmed") confirmed++;
     else if (sev === "suspected") suspected++;
     else if (e.verdict === "unverified") lowUnverified++; // low-risk unverified only
-    else genuine++; // original / derivative / revoked / expired
+    else if (e.verdict === "revoked") revoked++;
+    else if (e.verdict === "expired") expired++;
+    else genuine++; // original / derivative only
     verdictBreakdown[e.verdict] = (verdictBreakdown[e.verdict] ?? 0) + 1;
   }
   const fraud = events.filter((e) => severityOf(e) !== "low");
@@ -198,6 +214,8 @@ export function getDashboardStats() {
       ...store.stats(),
       totalVerifications: events.length,
       genuineVerifications: genuine,
+      revokedHits: revoked,
+      expiredHits: expired,
       confirmedFraud: confirmed,
       suspectedFraud: suspected,
       lowRiskUnverified: lowUnverified,

@@ -606,7 +606,7 @@ textarea.form-control {
   gap: 22px;
   margin-top: 34px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -704,13 +704,13 @@ textarea.form-control {
 
 .core-label {
   fill: var(--ink);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 
 .core-sub {
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.13em;
 }
 
@@ -729,14 +729,14 @@ textarea.form-control {
 }
 
 .topology-label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.05em;
 }
 
 .topology-node-state {
   fill: var(--faint);
   font-family: var(--font-geist-mono);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.18em;
   text-anchor: middle;
 }
@@ -788,7 +788,7 @@ textarea.form-control {
 
 .architecture-foot span {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -1003,7 +1003,7 @@ textarea.form-control {
 
 .micro-label {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .intake-zone {
@@ -1058,7 +1058,7 @@ textarea.form-control {
 }
 
 .upload-zone > span:last-child {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -1083,7 +1083,7 @@ textarea.form-control {
 .intake-actions p {
   margin: 6px 0 0;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .verify-button {
@@ -1121,7 +1121,7 @@ textarea.form-control {
 .pipeline-step p {
   margin: 8px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
@@ -1135,7 +1135,7 @@ textarea.form-control {
   justify-content: space-between;
   margin-bottom: 22px;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
@@ -1155,7 +1155,7 @@ textarea.form-control {
 }
 
 .result-placeholder > span {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .scan-orbit {
@@ -1215,7 +1215,7 @@ textarea.form-control {
 
 .verdict-banner > div:nth-child(2) > span {
   color: var(--verdict-color);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.17em;
 }
 
@@ -1247,7 +1247,7 @@ textarea.form-control {
 
 .risk-dial span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .verdict-message {
@@ -1342,7 +1342,7 @@ textarea.form-control {
   padding: 0 16px;
   border-right: 1px solid var(--line);
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1353,7 +1353,7 @@ textarea.form-control {
   margin: 0;
   padding: 12px 16px;
   overflow-wrap: anywhere;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .evidence-list dd.good { color: var(--green); }
@@ -1420,7 +1420,7 @@ textarea.form-control {
 
 .signal-grid > div > span {
   color: var(--verdict-color);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .signal-grid strong {
@@ -1432,7 +1432,7 @@ textarea.form-control {
 .signal-grid p {
   margin: 9px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
@@ -1456,7 +1456,7 @@ textarea.form-control {
 
 .indicator-bar span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .indicator-bar strong {
@@ -1513,7 +1513,7 @@ textarea.form-control {
 .prototype-notice p {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
@@ -1548,7 +1548,7 @@ textarea.form-control {
   align-items: center;
   gap: 9px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .record-status i {
@@ -1595,7 +1595,7 @@ textarea.form-control {
 
 .issuer-identity-card > div:nth-child(2) span {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   text-transform: uppercase;
 }
 
@@ -1655,13 +1655,13 @@ textarea.form-control {
 .compact-upload p {
   margin: 8px 0 0;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .compact-upload b {
   margin-right: 18px;
   color: var(--blue);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .sign-action-row {
@@ -1675,7 +1675,7 @@ textarea.form-control {
 .sign-action-row p {
   margin: 7px 0 0;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .seed-state {
@@ -1734,7 +1734,7 @@ textarea.form-control {
 .receipt-empty p {
   margin: 13px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .signing-receipt {
@@ -1766,7 +1766,7 @@ textarea.form-control {
 
 .receipt-success > div:nth-child(2) > span {
   color: var(--green);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.15em;
 }
 
@@ -1778,7 +1778,7 @@ textarea.form-control {
 .receipt-success p {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .signing-receipt dl {
@@ -1820,7 +1820,7 @@ textarea.form-control {
   align-items: center;
   gap: 24px;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.11em;
   text-transform: uppercase;
 }
@@ -1862,7 +1862,7 @@ textarea.form-control {
 
 .radar-stat > span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.13em;
 }
 
@@ -1876,7 +1876,7 @@ textarea.form-control {
 .radar-stat p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .radar-stat.danger strong { color: var(--red); }
@@ -1911,13 +1911,13 @@ textarea.form-control {
 }
 
 .console-brand strong {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.13em;
 }
 
 .console-brand span:last-child {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.17em;
 }
 
@@ -1929,7 +1929,7 @@ textarea.form-control {
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .radar-nav-item.active {
@@ -1944,7 +1944,7 @@ textarea.form-control {
 
 .radar-nav-item b {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .integrity-block {
@@ -1957,17 +1957,17 @@ textarea.form-control {
 
 .integrity-block > span {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
   letter-spacing: 0.12em;
 }
 
 .integrity-block strong {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .integrity-block .good { color: var(--green); }
 .integrity-block .bad { color: var(--red); }
-.integrity-block p { margin: 0; color: var(--muted); font-size: 8px; }
+.integrity-block p { margin: 0; color: var(--muted); font-size: 10px; }
 
 .campaign-workspace {
   min-width: 0;
@@ -2001,7 +2001,7 @@ textarea.form-control {
   align-items: center;
   gap: 7px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .toolbar-legend i {
@@ -2031,7 +2031,7 @@ textarea.form-control {
   max-width: 410px;
   margin: 12px 0 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.6;
 }
 
@@ -2109,7 +2109,7 @@ textarea.form-control {
 
 .campaign-score span {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .campaign-metrics {
@@ -2133,7 +2133,7 @@ textarea.form-control {
 
 .campaign-metrics span {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
   text-transform: uppercase;
 }
 
@@ -2154,14 +2154,14 @@ textarea.form-control {
 
 .campaign-indicators span {
   color: var(--faint);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .campaign-indicators p {
   margin: 0;
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .campaign-export {
@@ -2172,7 +2172,7 @@ textarea.form-control {
   gap: 13px;
   border-left: 1px solid var(--line);
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.5;
   text-align: center;
   text-transform: uppercase;
@@ -2186,7 +2186,7 @@ textarea.form-control {
 .campaign-export > span {
   padding: 4px 7px;
   border: 1px solid var(--line-strong);
-  font-size: 7px;
+  font-size: 10px;
 }
 
 .campaign-export b {
@@ -2230,13 +2230,13 @@ textarea.form-control {
 
 .toplist-row > span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   text-align: center;
 }
 
 .toplist-row > strong {
   overflow: hidden;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2244,14 +2244,14 @@ textarea.form-control {
 
 .toplist-row > b {
   color: var(--blue);
-  font-size: 9px;
+  font-size: 10px;
   text-align: center;
 }
 
 .signing-receipt dt {
   border-right: 1px solid var(--line);
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2259,7 +2259,7 @@ textarea.form-control {
 .signing-receipt dd {
   overflow-wrap: anywhere;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .site-footer {
@@ -2313,7 +2313,7 @@ textarea.form-control {
 
   .primary-nav a {
     padding: 16px 8px;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .system-pill {
@@ -2707,7 +2707,7 @@ textarea.form-control {
 
 .core-sub {
   font-family: var(--font-geist-mono), monospace;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .topology-node-state,
@@ -3330,4 +3330,26 @@ button.toplist-row.active {
   color: var(--ink);
   text-decoration-style: solid;
 }
+
+/* ---- issuer revocation ---- */
+.receipt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.button.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+.button.danger:hover:not(:disabled) {
+  background: var(--red-soft);
+}
+.signing-receipt.is-revoked .receipt-check {
+  color: var(--red);
+}
+.signing-receipt.is-revoked .receipt-success > div > span {
+  color: var(--red);
+}
+
 
