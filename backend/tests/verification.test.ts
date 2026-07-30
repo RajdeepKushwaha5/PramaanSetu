@@ -7,12 +7,27 @@
 
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 process.env.PRAMAAN_DB_PATH = join(mkdtempSync(join(tmpdir(), "pramaan-test-")), "db.json");
 process.env.GEMINI_API_KEYS = "";
+
+// Locate a local FFmpeg (repo/.tools) so video/audio tests can run; if not
+// found, those tests skip gracefully (e.g. on CI without FFmpeg).
+if (!process.env.FFMPEG_PATH) {
+  try {
+    const toolsRoot = join(process.cwd(), "..", ".tools");
+    const sub = readdirSync(toolsRoot).find((d) => d.startsWith("ffmpeg"));
+    if (sub) {
+      const p = join(toolsRoot, sub, "bin", "ffmpeg.exe");
+      if (existsSync(p)) process.env.FFMPEG_PATH = p;
+    }
+  } catch {
+    /* no local ffmpeg */
+  }
+}
 
 const { signContent } = await import("../src/services/signingService.js");
 const { verifyContent } = await import("../src/services/verificationService.js");
@@ -144,4 +159,26 @@ test("forged PDF circular with swapped QR -> altered, names the fraud payee", as
   const r = await verifyContent({ mimeType: "application/pdf", bytes: bundle.alteredPdf });
   assert.equal(r.verdict, "altered");
   assert.equal(r.match?.paymentTamper?.foundPayee, "fraudster12@ybl");
+});
+
+// ---- video + audio (voice-clone) tests; skip if FFmpeg is unavailable ----
+const { isFfmpegAvailable } = await import("../src/fingerprint/index.js");
+const { makeDemoVideos } = await import("../src/services/demoVideo.js");
+const ffmpeg = isFfmpegAvailable();
+let videos: ReturnType<typeof makeDemoVideos>;
+
+test("video: genuine -> original, compressed -> derivative, voice-clone -> altered", { skip: !ffmpeg }, async () => {
+  videos = makeDemoVideos();
+  assert.ok(videos, "demo videos should generate");
+  await signContent({ issuerId, title: "CEO video statement", mimeType: "video/mp4", bytes: videos.originalMp4 });
+
+  const original = await verifyContent({ mimeType: "video/mp4", bytes: videos.originalMp4 });
+  assert.equal(original.verdict, "original");
+
+  const compressed = await verifyContent({ mimeType: "video/mp4", bytes: videos.compressedMp4 });
+  assert.equal(compressed.verdict, "derivative");
+
+  const cloned = await verifyContent({ mimeType: "video/mp4", bytes: videos.clonedMp4 });
+  assert.equal(cloned.verdict, "altered");
+  assert.match(cloned.message, /AUDIO/i);
 });

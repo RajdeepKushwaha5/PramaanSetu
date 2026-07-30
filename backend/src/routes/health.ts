@@ -15,7 +15,9 @@ healthRouter.get("/", (_req, res) => {
     capabilities: {
       signing: true,
       imageFingerprint: true,
+      pdfFingerprint: true,
       videoFingerprint: isFfmpegAvailable(),
+      audioFingerprint: isFfmpegAvailable(),
       aiRiskEngine: km.size > 0 && km.hasHealthyKey(),
     },
     store: getStore().stats(),

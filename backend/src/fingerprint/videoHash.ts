@@ -13,22 +13,9 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { imageFingerprint } from "./imageHash.js";
+import { ffmpegBin, isFfmpegAvailable } from "./ffmpeg.js";
 
-let ffmpegChecked = false;
-let ffmpegAvailable = false;
-
-export function isFfmpegAvailable(): boolean {
-  if (!ffmpegChecked) {
-    try {
-      const r = spawnSync("ffmpeg", ["-version"], { encoding: "utf8" });
-      ffmpegAvailable = r.status === 0;
-    } catch {
-      ffmpegAvailable = false;
-    }
-    ffmpegChecked = true;
-  }
-  return ffmpegAvailable;
-}
+export { isFfmpegAvailable };
 
 /** Extract up to `maxFrames` keyframes and return their dHashes. */
 export async function videoFrameHashes(
@@ -44,7 +31,7 @@ export async function videoFrameHashes(
     writeFileSync(inPath, buffer);
     // Sample 1 frame every 2s, downscale to 64px wide, cap at maxFrames.
     spawnSync(
-      "ffmpeg",
+      ffmpegBin(),
       [
         "-i", inPath,
         "-vf", "fps=1/2,scale=64:-1",

@@ -14,6 +14,7 @@ export {
 } from "./imageHash.js";
 export { isFfmpegAvailable, videoFrameHashes } from "./videoHash.js";
 export { renderPdfPages, renderPdfFirstPage } from "./pdf.js";
+export { audioFingerprint, audioChangedCells, AUDIO_SAME_MAX } from "./audioHash.js";
 
 /**
  * Verdict thresholds on the changed-cell count (out of 1024).

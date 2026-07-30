@@ -5,6 +5,7 @@ import type { EntityClass } from "../db/types.js";
 import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
 import { signContent } from "../services/signingService.js";
 import { makeDemoBundle } from "../services/demoAssets.js";
+import { makeDemoVideos } from "../services/demoVideo.js";
 
 export const seedRouter = Router();
 
@@ -118,10 +119,31 @@ seedRouter.post("/", async (req, res) => {
     signed.push(pdfTitle);
   }
 
+  // 4) A signed video (if FFmpeg is available) for the voice-clone demo.
+  const demoVideos: Record<string, string> = {};
+  const videos = makeDemoVideos();
+  if (videos) {
+    const videoTitle = "SEBI official video statement (demo)";
+    if (!store.listAssets().some((x) => x.title === videoTitle)) {
+      await signContent({
+        issuerId: sebi.id,
+        title: videoTitle,
+        mimeType: "video/mp4",
+        bytes: videos.originalMp4,
+        authoritativeUrl: "https://www.sebi.gov.in/media",
+      });
+      signed.push(videoTitle);
+    }
+    demoVideos.original_mp4_expect_original = videos.originalMp4.toString("base64");
+    demoVideos.compressed_mp4_expect_derivative = videos.compressedMp4.toString("base64");
+    demoVideos.voiceclone_mp4_expect_altered = videos.clonedMp4.toString("base64");
+  }
+
   res.json({
     message: "Seed complete.",
     newlySigned: signed,
     stats: store.stats(),
+    ffmpeg: !!videos,
     demoImages: {
       note: "Use these with POST /api/verify to see each verdict.",
       original_png_expect_original: bundle.originalPng.toString("base64"),
@@ -129,6 +151,7 @@ seedRouter.post("/", async (req, res) => {
       altered_png_expect_altered: bundle.alteredPng.toString("base64"),
       original_pdf_expect_original: bundle.originalPdf.toString("base64"),
       altered_pdf_expect_altered: bundle.alteredPdf.toString("base64"),
+      ...demoVideos,
     },
   });
 });

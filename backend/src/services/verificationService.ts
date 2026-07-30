@@ -20,6 +20,10 @@ import {
   imageFingerprint,
   mediaTypeFromMime,
   sha256,
+  audioFingerprint,
+  audioChangedCells,
+  AUDIO_SAME_MAX,
+  extFromMime,
 } from "../fingerprint/index.js";
 import { decodeQr, extractUpiPayee } from "../fingerprint/qr.js";
 import { getFingerprintIndex } from "../fingerprint/fpIndex.js";
@@ -187,6 +191,38 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
             message: `This resembles a ${issuerName} communication, but the underlying registry record's signature does not validate. Do not trust it.`,
             contentHash,
           };
+        }
+
+        // Audio-replacement (voice-clone) check: if the video frames match a
+        // signed asset but the audio track's spectrogram differs, the audio was
+        // replaced — the signature of a dubbed / voice-cloned deepfake.
+        if (mediaType === "video" && best.asset.audioFingerprint && contentBuf) {
+          const probeAudio = await audioFingerprint(contentBuf, extFromMime(input.mimeType));
+          if (probeAudio) {
+            const audioDiff = audioChangedCells(probeAudio, best.asset.audioFingerprint);
+            if (audioDiff > AUDIO_SAME_MAX) {
+              record({
+                verdict: "altered",
+                mediaType,
+                contentHash,
+                asset: best.asset,
+                tamperType: "audio_replaced",
+              });
+              return {
+                verdict: "altered",
+                mediaType,
+                match: {
+                  ...publicMatch(best.asset, best.dist, originalSigValid),
+                  differences: [
+                    `The video frames match a genuine ${issuerName} communication, but the AUDIO track has been replaced (${audioDiff}/256 spectrogram cells changed).`,
+                    "This is the signature of a voice-clone or dubbed deepfake. Do not trust the audio.",
+                  ],
+                },
+                message: `WARNING: The video looks like a genuine ${issuerName} communication, but its AUDIO was REPLACED — likely a voice clone. Do not trust it.`,
+                contentHash,
+              };
+            }
+          }
         }
 
         // Payment-tamper check: decode the QR and confirm the payee is still an

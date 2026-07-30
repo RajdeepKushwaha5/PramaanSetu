@@ -3,7 +3,13 @@
 import { getStore } from "../db/store.js";
 import type { Manifest, MediaType, SignedAsset } from "../db/types.js";
 import { signManifest } from "../crypto/signing.js";
-import { computePerceptualHashes, mediaTypeFromMime, sha256 } from "../fingerprint/index.js";
+import {
+  audioFingerprint,
+  computePerceptualHashes,
+  extFromMime,
+  mediaTypeFromMime,
+  sha256,
+} from "../fingerprint/index.js";
 
 export interface SignInput {
   issuerId: string;
@@ -40,6 +46,13 @@ export async function signContent(input: SignInput): Promise<SignResult> {
       ? []
       : await computePerceptualHashes(contentBuf, mediaType, input.mimeType);
 
+  // Fingerprint the audio track for video/audio, so a replaced (voice-cloned)
+  // track is detectable even when the video frames still match.
+  const audioFp =
+    mediaType === "video" || mediaType === "audio"
+      ? (await audioFingerprint(contentBuf, extFromMime(input.mimeType))) ?? undefined
+      : undefined;
+
   const publishedAt = new Date().toISOString();
   const manifest: Manifest = {
     issuer: {
@@ -69,6 +82,7 @@ export async function signContent(input: SignInput): Promise<SignResult> {
     mimeType: input.mimeType,
     contentHash,
     perceptualHashes,
+    audioFingerprint: audioFp,
     manifest,
     signature,
     publishedAt,

@@ -68,6 +68,8 @@ const SAMPLES: { id: string; key: string; mime: string; name: string; label: str
   { id: "fi", key: "altered_png_expect_altered", mime: "image/png", name: "forged-circular.png", label: "forged QR · image", tone: "danger" },
   { id: "gp", key: "original_pdf_expect_original", mime: "application/pdf", name: "genuine-circular.pdf", label: "genuine PDF", tone: "verified" },
   { id: "fp", key: "altered_pdf_expect_altered", mime: "application/pdf", name: "forged-circular.pdf", label: "forged QR · PDF", tone: "danger" },
+  { id: "gv", key: "original_mp4_expect_original", mime: "video/mp4", name: "genuine-video.mp4", label: "genuine video", tone: "verified" },
+  { id: "cv", key: "voiceclone_mp4_expect_altered", mime: "video/mp4", name: "voiceclone-video.mp4", label: "voice-cloned video", tone: "danger" },
 ];
 
 function base64ToFile(b64: string, mime: string, name: string): File {

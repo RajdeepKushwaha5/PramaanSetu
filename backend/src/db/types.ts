@@ -69,6 +69,7 @@ export interface SignedAsset {
   mimeType: string;
   contentHash: string;
   perceptualHashes: string[]; // image: 1 hash; video: per-keyframe hashes
+  audioFingerprint?: string; // video/audio: spectrogram signature of the audio track
   manifest: Manifest;
   signature: string; // base64 Ed25519 over canonical manifest JSON
   publishedAt: string;
