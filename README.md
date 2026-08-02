@@ -93,6 +93,10 @@ screens are available:
 | Signing rail | <http://localhost:3000/issuer> | Seed demo issuers and sign content |
 | SupTech radar | <http://localhost:3000/dashboard> | Review metrics, campaigns, and shared indicators |
 
+For the full guided 5–7 minute demo (mock roles, deepfake detection, swapped-QR,
+voice-clone, audio provenance, campaign linking, revocation) see
+[DEMO.md](DEMO.md).
+
 ### Two-minute walkthrough
 
 1. Open the signing rail and select **initialise demo registry**.
@@ -105,35 +109,56 @@ screens are available:
 5. Open the SupTech radar to see the new verification events and any linked
    campaign.
 
-The seed endpoint also generates an original image, a recompressed copy, and
-an altered image with a replaced payment QR. These are returned as base64
-values from `POST /api/seed` for deterministic API demonstrations.
+The seed endpoint also generates a full demo set — an original image, a
+recompressed copy, an altered image/PDF with a replaced payment QR, a genuine
+video and a voice-cloned one, a signed audio advisory with a recompressed copy,
+and unsigned "flat render" / "camera-like" samples for the synthetic detector.
+These are returned as base64 values from `POST /api/seed` for deterministic API
+and one-click UI demonstrations.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     I[Issuer] --> S[Signing API]
-    S --> M[Signed provenance manifest]
-    M --> R[Asset registry]
-    M --> L[Hash-chain transparency log]
+    S --> M[Ed25519-signed provenance manifest]
+    M --> R[(Asset registry)]
+    M --> L[(Hash-chain transparency log)]
 
-    U[Investor] --> V[Verification API]
-    V --> H[SHA-256 exact match]
-    V --> P[Perceptual and QR checks]
-    V --> A[Gemini risk fallback]
+    U["Investor - web or Telegram"] --> V[Verification API]
+    V --> H["Step 1 - exact SHA-256 match"]
+    V --> P["Step 2 - perceptual match: crop-tolerant image/video/PDF grid + audio spectrogram"]
+    R -.provenance lookup.-> H
+    R -.provenance lookup.-> P
 
-    H --> E[Verification event]
-    P --> E
-    A --> E
-    E --> C[Campaign clustering]
+    H --> G{"Ed25519 signature valid?"}
+    P --> G
+    G -- no --> IP[invalid_provenance]
+    G -- yes --> TA{"tampered? swapped payment QR or replaced audio"}
+    TA -- no --> OK["original / derivative / revoked / expired"]
+    TA -- yes --> ALT[altered]
+
+    V --> N["Step 3 - no provenance match"]
+    N --> SD["Synthetic-media detection: vision model + forensics"]
+    N --> AR[AI phishing-risk engine]
+    SD --> UNV["unverified + detection signal"]
+    AR --> UNV
+
+    OK --> E[Verification event]
+    ALT --> E
+    IP --> E
+    UNV --> E
+    E --> C[Campaign clustering - shared indicators]
     C --> D[SupTech radar]
     C --> X[Signed evidence export]
 ```
 
 The deterministic path runs before the AI path. A matching registry record is
-not enough by itself. Its Ed25519 signature must also validate before the
-content can be reported as genuine.
+not enough by itself: its Ed25519 signature must also validate before the
+content can be reported as genuine (otherwise it becomes `invalid_provenance`).
+Only when there is no provenance match at all does the media reach the
+synthetic-media detector and the phishing-risk engine — AI is the catch-net,
+never the proof.
 
 ## Verification decisions
 
@@ -370,11 +395,12 @@ is ignored by Git.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/health` | Capabilities and store counts |
+| `GET` | `/api/health` | Capabilities, degraded status, and store counts |
 | `GET` | `/api/issuers` | Public issuer list |
 | `POST` | `/api/issuers` | Create an issuer with `x-admin-key` |
 | `POST` | `/api/sign` | Sign content with `x-issuer-key`, except approved demo issuers in demo mode |
-| `POST` | `/api/verify` | Run provenance, tamper, and fallback risk checks |
+| `POST` | `/api/verify` | Run provenance, tamper, synthetic-detection, and fallback risk checks |
+| `POST` | `/api/revoke` | Revoke (or restore) a signed asset with `x-issuer-key` |
 | `POST` | `/api/risk` | Run the Gemini risk engine directly |
 | `POST` | `/api/seed` | Create the local synthetic demo set |
 | `GET` | `/api/campaigns` | List connected fraud campaigns |
@@ -389,7 +415,9 @@ is ignored by Git.
 The SupTech radar polls aggregate metrics every five seconds. The backend also
 exposes:
 
-- `/api/health` for service capabilities and local store counts
+- `/api/health` for service capabilities, a degraded-status list (missing
+  FFmpeg / Gemini keys, or a failed log-integrity check → `degraded`/`critical`),
+  and local store counts
 - `/api/dashboard` for verdict totals and top fraud indicators
 - `/api/log` for transparency-chain integrity
 - `/api/events` for the latest verification events
@@ -404,17 +432,18 @@ system before deployment.
 pramaansetu/
 ├── frontend/
 │   ├── src/app/                 Next.js routes and page UI
-│   ├── src/components/          Shared application shell
+│   ├── src/components/          App shell, mock role login, interactive topology
 │   └── src/lib/api.ts           Backend URL helper
 ├── backend/
 │   ├── src/ai/                  Gemini client, key pool, and risk engine
 │   ├── src/detect/              Synthetic-media detection (vision/audio + forensics)
+│   ├── src/bot/                 Telegram verification channel
 │   ├── src/crypto/              Ed25519 signing helpers
 │   ├── src/db/                  JSON store and shared types
-│   ├── src/fingerprint/         Hashing, image, video, and QR checks
+│   ├── src/fingerprint/         Hashing, image, video, audio, and QR checks
 │   ├── src/routes/              Express API routes
 │   ├── src/services/            Signing, verification, campaigns, and evidence
-│   ├── scripts/benchmark.mjs    Synthetic deterministic benchmark
+│   ├── scripts/                 Deterministic, realistic, and scale benchmarks
 │   └── tests/                   Node test suite
 ├── STRUCTURE.md                 Expanded repository map
 └── package.json                 Monorepo scripts
@@ -535,9 +564,9 @@ role login (Investor / Issuer / Regulator); and an LSH scalability index.
 - Next.js 16 and React 19
 - Express 5 and TypeScript
 - Node.js crypto with Ed25519
-- Google Gemini through `@google/genai`
-- Jimp for image processing
-- jsQR and qrcode for payment QR checks
-- FFmpeg for video frame extraction
+- Google Gemini through `@google/genai` (phishing risk + deepfake vision/audio)
+- Jimp for image processing and deterministic forensics (ELA, noise cues)
+- jsQR and qrcode for payment QR checks; pdfjs-dist + pdf-lib for PDF rendering
+- FFmpeg for video frame extraction and audio decoding/fingerprinting
 - Zod for request validation
 - Helmet, CORS, and Express rate limiting
