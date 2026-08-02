@@ -183,6 +183,22 @@ test("video: genuine -> original, compressed -> derivative, voice-clone -> alter
   assert.match(cloned.message, /AUDIO/i);
 });
 
+test("audio: signed -> original, recompressed -> derivative, unrelated -> unverified", { skip: !ffmpeg }, async () => {
+  const { makeDemoAudio } = await import("../src/services/demoAudio.js");
+  const audio = makeDemoAudio();
+  assert.ok(audio, "demo audio should generate");
+  await signContent({ issuerId, title: "SEBI audio advisory", mimeType: "audio/mp4", bytes: audio.originalM4a });
+
+  const original = await verifyContent({ mimeType: "audio/mp4", bytes: audio.originalM4a });
+  assert.equal(original.verdict, "original");
+
+  const recompressed = await verifyContent({ mimeType: "audio/mp4", bytes: audio.compressedM4a });
+  assert.equal(recompressed.verdict, "derivative", "a recompressed genuine voice note must be recognised as a copy");
+
+  const unrelated = await verifyContent({ mimeType: "audio/mp4", bytes: audio.unrelatedM4a });
+  assert.equal(unrelated.verdict, "unverified", "an unrelated recording must NOT false-match a signed audio record");
+});
+
 // ---- synthetic-media detection (forensics-only; AI disabled in tests) ----
 
 test("unsigned AI-render-like image -> unverified, forensic synthetic signal fires", async () => {

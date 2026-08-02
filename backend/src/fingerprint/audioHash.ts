@@ -95,5 +95,12 @@ export function audioChangedCells(aB64: string, bB64: string): number {
   return c;
 }
 
-/** Threshold: <= this many changed cells (of 256) = same audio; more = replaced. */
+/**
+ * Threshold: <= this many changed cells (of 256) = the same recording.
+ * Used both for the video voice-clone check (audio replaced when a matched
+ * video's audio exceeds it) and for audio-to-audio provenance (a recompressed
+ * copy within it verifies as a derivative). Kept well below the distance to an
+ * unrelated recording, so audio provenance never false-matches (see the audio
+ * test).
+ */
 export const AUDIO_SAME_MAX = 40;

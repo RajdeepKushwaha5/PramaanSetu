@@ -323,8 +323,66 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
     }
   }
 
-  // 3) No provenance match -> Unverified. Run AI risk engine as a fallback.
+  // 3) Audio-to-audio provenance: a recompressed/edited copy of a signed audio
+  //    record is matched by its spectrogram signature.
+  if (mediaType === "audio" && contentBuf) {
+    const audioResult = await matchSignedAudio(contentBuf, input.mimeType, contentHash);
+    if (audioResult) return audioResult;
+  }
+
+  // 4) No provenance match -> Unverified. Run AI risk engine as a fallback.
   return unverified(input, mediaType, contentHash);
+}
+
+/**
+ * Match an unsigned audio clip against signed audio records by spectrogram
+ * distance. Returns a `derivative` verdict when the clip is a recompressed copy
+ * of a signed recording (a forwarded voice note), or null when it matches
+ * nothing — in which case the caller falls through to unverified + the
+ * synthetic-voice detector, which is the right tool for "was this audio
+ * manipulated?".
+ *
+ * The ceiling is the tight AUDIO_SAME_MAX band (verified by the audio test to
+ * accept a recompressed copy while rejecting an unrelated recording), so audio
+ * provenance never false-matches.
+ */
+async function matchSignedAudio(
+  contentBuf: Buffer,
+  mimeType: string,
+  contentHash: string,
+): Promise<VerifyResult | null> {
+  const store = getStore();
+  const probe = await audioFingerprint(contentBuf, extFromMime(mimeType));
+  if (!probe) return null;
+
+  let best: { asset: SignedAsset; dist: number } | null = null;
+  for (const asset of store.listAssets()) {
+    if (asset.mediaType !== "audio" || !asset.audioFingerprint) continue;
+    const d = audioChangedCells(probe, asset.audioFingerprint);
+    if (!best || d < best.dist) best = { asset, dist: d };
+  }
+  if (!best || best.dist > AUDIO_SAME_MAX) return null;
+
+  const issuer = store.getIssuer(best.asset.issuerId);
+  const sigValid = issuer
+    ? verifyManifest(best.asset.manifest, best.asset.signature, issuer.publicKey)
+    : false;
+  const issuerName = best.asset.manifest.issuer.name;
+
+  if (!sigValid) {
+    record({ verdict: "invalid_provenance", mediaType: "audio", contentHash, asset: best.asset });
+    return {
+      verdict: "invalid_provenance",
+      mediaType: "audio",
+      match: publicMatch(best.asset, best.dist, false),
+      message: `This resembles a ${issuerName} audio recording, but the underlying record's signature does not validate. Do not trust it.`,
+      contentHash,
+    };
+  }
+
+  const { verdict, message } = resolveGenuineVerdict(best.asset, false);
+  record({ verdict, mediaType: "audio", contentHash, asset: best.asset });
+  return { verdict, mediaType: "audio", match: publicMatch(best.asset, best.dist, true), message, contentHash };
 }
 
 async function unverified(

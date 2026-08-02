@@ -152,6 +152,11 @@ colour block grid. Up to 4 changed cells is treated as a recompressed copy.
 Between 5 and 300 changed cells is treated as a possible alteration. These
 thresholds are prototype values and need calibration on real forwarded media.
 
+Audio is matched by a compact spectrogram signature: a recompressed copy of a
+signed recording (a forwarded voice note) verifies as a `derivative`, while an
+unrelated recording stays `unverified` (the threshold sits well below the
+distance to an unrelated clip, so it never false-matches).
+
 When no signed record matches at all, an `unverified` image, video, or audio
 file additionally receives a **synthetic-media assessment** (a 0–100 score with
 a `likely-authentic` / `uncertain` / `likely-synthetic` label). `unverified`
@@ -258,7 +263,7 @@ Run the backend test suite from the repository root:
 npm test
 ```
 
-The current suite contains 17 tests covering:
+The current suite contains 18 tests covering:
 
 - exact signed images and text
 - recompressed image matching
@@ -269,6 +274,7 @@ The current suite contains 17 tests covering:
 - campaign creation from a QR fraud event
 - signed evidence packs
 - video verification (genuine / recompressed / voice-clone)
+- audio provenance (signed / recompressed-copy / unrelated, no false match)
 - synthetic-media detection: forensic signal fires on AI-render-like media,
   separates it from camera-like media with no false alarm, and is tallied for
   the SupTech dashboard
@@ -437,9 +443,10 @@ large fingerprint indexes.
 
 ### Block-grid fingerprints instead of a learned matcher
 
-The 32 by 32 colour grid is fast, local, and easy to inspect. It handles the
-current recompression cases but needs stronger invariance for crops, rotations,
-screenshots, and more aggressive transformations.
+The 32 by 32 colour grid is fast, local, and easy to inspect. It handles
+recompression, screenshots, scaling, and small crops (the last via centre-crop
+fingerprint variants stored at signing time), but still needs rotation
+invariance and stronger robustness to more aggressive transformations.
 
 ### Connected components for campaign discovery
 
@@ -474,6 +481,7 @@ libraries. The frontend reports a high-severity PostCSS advisory that is
 (`next/node_modules/postcss`); it affects the build step, not the served
 runtime, and the only offered "fix" downgrades Next.js to v9 (a breaking
 change). It will clear with a future Next.js release rather than a local change.
+See [SECURITY.md](SECURITY.md) for the full advisory-by-advisory breakdown.
 
 ## Deployment
 
@@ -513,13 +521,14 @@ signing rail, verdict engine, campaign graph, and evidence flow stay as they are
 
 ### Already built (beyond the original plan)
 
-Image, PDF (page rendering + QR extraction), video (frame fingerprinting), and
-audio (voice-clone / audio-replacement) verification; **synthetic-media
-detection** (deepfake image/video and synthetic-voice scoring via a vision/audio
-model plus deterministic forensics); QR payment-tamper detection; a tamper
-heatmap; issuer revocation; a stable-ID campaign graph; signed evidence export;
-a Telegram channel; a mock role login (Investor / Issuer / Regulator); and an
-LSH scalability index.
+Image, PDF (page rendering + QR extraction), and video (frame fingerprinting)
+verification; audio provenance (recompressed copy of a signed recording -> a
+derivative) and voice-clone / audio-replacement detection on matched videos;
+**synthetic-media detection** (deepfake image/video and synthetic-voice scoring
+via a vision/audio model plus deterministic forensics); crop-tolerant image
+matching; QR payment-tamper detection; a tamper heatmap; issuer revocation; a
+stable-ID campaign graph; signed evidence export; a Telegram channel; a mock
+role login (Investor / Issuer / Regulator); and an LSH scalability index.
 
 ## Technology
 

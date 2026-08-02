@@ -86,6 +86,7 @@ const SAMPLES: { id: string; key: string; mime: string; name: string; label: str
   { id: "fp", key: "altered_pdf_expect_altered", mime: "application/pdf", name: "forged-circular.pdf", label: "forged QR · PDF", tone: "danger" },
   { id: "gv", key: "original_mp4_expect_original", mime: "video/mp4", name: "genuine-video.mp4", label: "genuine video", tone: "verified" },
   { id: "cv", key: "voiceclone_mp4_expect_altered", mime: "video/mp4", name: "voiceclone-video.mp4", label: "voice-cloned video", tone: "danger" },
+  { id: "ga", key: "compressed_m4a_expect_derivative", mime: "audio/mp4", name: "voice-note.m4a", label: "forwarded voice note", tone: "verified" },
   { id: "sy", key: "synthetic_png_expect_synthetic", mime: "image/png", name: "flat-render.png", label: "flat render · detection", tone: "caution" },
   { id: "au", key: "authentic_png_expect_authentic", mime: "image/png", name: "camera-like.png", label: "camera-like · detection", tone: "verified" },
 ];
@@ -527,6 +528,12 @@ function SyntheticPanel({ synthetic }: { synthetic: Synthetic }) {
           )}
         </div>
       )}
+      <p className="synth-caveat">
+        Detection is a probabilistic <b>signal, not proof</b>. A high score means
+        likely AI-generated or manipulated; it is never a guarantee, and a low
+        score never certifies authenticity. Provenance (a signed record) is the
+        only proof of origin.
+      </p>
     </div>
   );
 }

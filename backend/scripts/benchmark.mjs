@@ -103,8 +103,8 @@ const rate = (a, b) => `${((a / b) * 100).toFixed(1)}% (${a}/${b})`;
 
 console.log("\n=== PramaanSetu SYNTHETIC PROTOTYPE Benchmark ===");
 console.log("NOTE: synthetic templates + Jimp-generated recompression only. Not a general");
-console.log("accuracy claim. Real forwarded media (WhatsApp/Telegram), PDFs, video, crops,");
-console.log("rotations and adversarial edits are future work.");
+console.log("accuracy claim. Recompression, screenshots, scaling and small crops are covered");
+console.log("(see benchmark:real); rotation and adversarial edits remain future work.");
 console.log(`Dataset: ${N} originals, ${derivTot} derivatives, ${alterTot} altered (QR-swap + visual edit), ${unrelTot} unrelated`);
 console.log(`Method: SHA-256 + Ed25519 provenance; 32x32 colour block grid (derivative<=4, altered<=300 cells); QR payee check`);
 console.log(`AI risk engine: disabled for reproducibility (deterministic layer only)\n`);

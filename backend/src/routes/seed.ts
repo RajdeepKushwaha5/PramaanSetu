@@ -6,6 +6,7 @@ import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
 import { signContent } from "../services/signingService.js";
 import { makeDemoBundle } from "../services/demoAssets.js";
 import { makeDemoVideos } from "../services/demoVideo.js";
+import { makeDemoAudio } from "../services/demoAudio.js";
 
 export const seedRouter = Router();
 
@@ -137,6 +138,25 @@ seedRouter.post("/", async (req, res) => {
     demoVideos.original_mp4_expect_original = videos.originalMp4.toString("base64");
     demoVideos.compressed_mp4_expect_derivative = videos.compressedMp4.toString("base64");
     demoVideos.voiceclone_mp4_expect_altered = videos.clonedMp4.toString("base64");
+  }
+
+  // 5) A signed audio advisory (if FFmpeg is available) for audio provenance.
+  const audio = makeDemoAudio();
+  if (audio) {
+    const audioTitle = "SEBI audio advisory (demo)";
+    if (!store.listAssets().some((x) => x.title === audioTitle)) {
+      await signContent({
+        issuerId: sebi.id,
+        title: audioTitle,
+        mimeType: "audio/mp4",
+        bytes: audio.originalM4a,
+        authoritativeUrl: "https://www.sebi.gov.in/media",
+      });
+      signed.push(audioTitle);
+    }
+    demoVideos.original_m4a_expect_original = audio.originalM4a.toString("base64");
+    demoVideos.compressed_m4a_expect_derivative = audio.compressedM4a.toString("base64");
+    demoVideos.unrelated_m4a_expect_unverified = audio.unrelatedM4a.toString("base64");
   }
 
   res.json({
