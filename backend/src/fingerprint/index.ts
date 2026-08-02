@@ -1,11 +1,12 @@
 import type { MediaType } from "../db/types.js";
-import { imageFingerprint } from "./imageHash.js";
+import { imageFingerprint, robustImageFingerprints } from "./imageHash.js";
 import { videoFrameHashes } from "./videoHash.js";
 import { renderPdfPages } from "./pdf.js";
 
 export { sha256 } from "./contentHash.js";
 export {
   imageFingerprint,
+  robustImageFingerprints,
   changedCells,
   bestChangedCells,
   cellDiffGrid,
@@ -62,6 +63,32 @@ export async function computePerceptualHashes(
     }
   } catch (e) {
     console.error("perceptual fingerprint failed:", e);
+  }
+  return [];
+}
+
+/**
+ * Fingerprints stored at SIGNING time. Same as {@link computePerceptualHashes}
+ * for the probe, but augments image and PDF-page references with geometry-robust
+ * variants (small crops/rotations) so cropped or tilted genuine forwards still
+ * match their signed record. Only the reference set is augmented; the probe path
+ * is unchanged, so match thresholds still gate false positives.
+ */
+export async function computeSigningFingerprints(
+  buffer: Buffer,
+  mediaType: MediaType,
+  mime: string,
+): Promise<string[]> {
+  try {
+    if (mediaType === "image") return await robustImageFingerprints(buffer);
+    if (mediaType === "video") return await videoFrameHashes(buffer, extFromMime(mime));
+    if (mediaType === "pdf") {
+      const pages = await renderPdfPages(buffer);
+      const sets = await Promise.all(pages.map((p) => robustImageFingerprints(p)));
+      return sets.flat();
+    }
+  } catch (e) {
+    console.error("signing fingerprint failed:", e);
   }
   return [];
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
+import { RoleProvider } from "@/components/role";
 import "./globals.css";
 
 const geist = Geist({
@@ -36,7 +37,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
-        <AppShell>{children}</AppShell>
+        <RoleProvider>
+          <AppShell>{children}</AppShell>
+        </RoleProvider>
       </body>
     </html>
   );

@@ -741,6 +741,180 @@ textarea.form-control {
   text-anchor: middle;
 }
 
+/* ---- interactive trust topology (homepage scenario player) ---- */
+.topology-station.is-clickable {
+  cursor: pointer;
+}
+.topology-station.is-clickable:hover .topology-node,
+.topology-station.is-clickable:focus-visible .topology-node {
+  stroke: var(--blue);
+}
+.topology-station.is-clickable:focus-visible {
+  outline: none;
+}
+.topology-node {
+  transition: stroke 0.3s ease, filter 0.3s ease;
+}
+.topology-node.is-active {
+  stroke: var(--blue);
+  stroke-width: 2.25;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--blue) 70%, transparent));
+}
+.topology-node.is-alert {
+  stroke: var(--red);
+  stroke-width: 2.25;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--red) 75%, transparent));
+}
+.topology-lines path.is-live {
+  opacity: 1;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  animation: topo-dash 0.6s linear infinite;
+}
+.tone-alert .topology-lines path.is-live {
+  stroke: var(--red);
+}
+.tone-info .topology-lines path.is-live {
+  stroke: var(--blue);
+}
+.tone-warn .topology-lines path.is-live {
+  stroke: var(--orange);
+}
+@keyframes topo-dash {
+  to {
+    stroke-dashoffset: -11;
+  }
+}
+.topology-token circle {
+  fill: color-mix(in srgb, var(--muted) 30%, transparent);
+  stroke: var(--muted);
+  stroke-width: 1.25;
+}
+.topology-token .topology-token-core {
+  fill: var(--muted);
+  stroke: none;
+}
+.topology-token.tone-info circle {
+  fill: color-mix(in srgb, var(--blue) 30%, transparent);
+  stroke: var(--blue);
+}
+.topology-token.tone-info .topology-token-core {
+  fill: var(--blue);
+}
+.topology-token.tone-alert circle {
+  fill: color-mix(in srgb, var(--red) 32%, transparent);
+  stroke: var(--red);
+}
+.topology-token.tone-alert .topology-token-core {
+  fill: var(--red);
+}
+.topology-token.tone-warn circle {
+  fill: color-mix(in srgb, var(--orange) 30%, transparent);
+  stroke: var(--orange);
+}
+.topology-token.tone-warn .topology-token-core {
+  fill: var(--orange);
+}
+
+.topology-story {
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--line);
+}
+.topology-story-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 52px;
+}
+.topology-story-line p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.topology-chip {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.topology-chip.tone-info {
+  color: var(--blue);
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+.topology-chip.tone-alert {
+  color: var(--red);
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+.topology-chip.tone-warn {
+  color: var(--orange);
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+.topology-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.topology-progress {
+  display: flex;
+  gap: 5px;
+}
+.topology-tick {
+  width: 22px;
+  height: 5px;
+  border-radius: 3px;
+  border: none;
+  padding: 0;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background 0.25s ease, width 0.25s ease;
+}
+.topology-tick.done {
+  background: color-mix(in srgb, var(--blue) 55%, var(--line-strong));
+}
+.topology-tick.active {
+  width: 30px;
+  background: var(--blue);
+}
+.topology-buttons {
+  display: flex;
+  gap: 6px;
+}
+.topology-buttons button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.topology-buttons button:hover {
+  border-color: var(--blue);
+}
+.topology-buttons button.play {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+  font-size: 11px;
+}
+
 .architecture-foot {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1253,9 +1427,9 @@ textarea.form-control {
 .verdict-message {
   padding: 20px 28px;
   border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.7;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.65;
 }
 
 .payment-alert {
@@ -1353,7 +1527,7 @@ textarea.form-control {
   margin: 0;
   padding: 12px 16px;
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: 12.5px;
 }
 
 .evidence-list dd.good { color: var(--green); }
@@ -1367,9 +1541,9 @@ textarea.form-control {
 
 .risk-summary p {
   margin: 0;
-  color: var(--muted);
-  font-size: 10px;
-  line-height: 1.7;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 .risk-summary .hindi {
@@ -1426,14 +1600,14 @@ textarea.form-control {
 .signal-grid strong {
   display: block;
   margin-top: 42px;
-  font-size: 11px;
+  font-size: 12.5px;
 }
 
 .signal-grid p {
   margin: 9px 0 0;
   color: var(--muted);
-  font-size: 10px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .indicator-bar {
@@ -3440,6 +3614,368 @@ button.toplist-row.active {
 @media (max-width: 720px) {
   .chain-steps {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---- synthetic-media detection panel (verify result) ---- */
+.synth-panel {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.synth-panel.danger {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+.synth-panel.caution {
+  border-color: var(--orange);
+  background: var(--orange-soft);
+}
+.synth-panel.verified {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+.synth-panel .panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.synth-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  padding: 16px;
+  align-items: center;
+}
+.synth-gauge {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  min-width: 96px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.synth-score {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.synth-panel.danger .synth-score {
+  color: var(--red);
+}
+.synth-panel.caution .synth-score {
+  color: var(--orange);
+}
+.synth-panel.verified .synth-score {
+  color: var(--green);
+}
+.synth-max {
+  font-size: 13px;
+  color: var(--faint);
+}
+.synth-verdict strong {
+  display: block;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.synth-verdict p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.synth-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.synth-sources span {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--faint);
+}
+.synth-sources span.on {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+.synth-signals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.synth-col {
+  padding: 14px 16px;
+}
+.synth-col + .synth-col {
+  border-left: 1px solid var(--line);
+}
+.synth-col ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+.synth-col li {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 5px 0;
+}
+.synth-col li b {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 10.5px;
+}
+.risk-dial.synth-likely-synthetic strong {
+  color: var(--red);
+}
+.risk-dial.synth-uncertain strong {
+  color: var(--orange);
+}
+.risk-dial.synth-likely-authentic strong {
+  color: var(--green);
+}
+.detect-bad {
+  color: var(--red);
+}
+.detect-warn {
+  color: var(--orange);
+}
+.detect-good {
+  color: var(--green);
+}
+.detect-foot {
+  padding: 10px 14px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 720px) {
+  .synth-head {
+    grid-template-columns: 1fr;
+  }
+  .synth-signals {
+    grid-template-columns: 1fr;
+  }
+  .synth-col + .synth-col {
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+}
+
+/* ---- mock login gate ---- */
+.mock-login {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.mock-login-card {
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 28px;
+}
+.mock-login-head h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+  color: var(--ink);
+}
+.mock-login-head p {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 60ch;
+}
+.mock-login-roles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.mock-role {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.mock-role:hover {
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+.mock-role-glyph {
+  font-size: 22px;
+  color: var(--blue);
+}
+.mock-role strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+.mock-role-id {
+  font-size: 11px;
+  color: var(--faint);
+}
+.mock-role p {
+  margin: 6px 0 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.mock-role-go {
+  margin-top: auto;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.mock-login-skip {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mock-login-skip:hover {
+  color: var(--ink);
+  border-color: var(--muted);
+}
+@media (max-width: 640px) {
+  .mock-login-roles {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- role switcher (header) ---- */
+.role-switcher {
+  position: relative;
+}
+.role-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  cursor: pointer;
+  color: var(--ink);
+}
+.role-current:hover {
+  border-color: var(--line-strong);
+}
+.role-glyph {
+  font-size: 14px;
+  color: var(--blue);
+}
+.role-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: left;
+}
+.role-text b {
+  font-size: 12px;
+  color: var(--ink);
+}
+.role-text i {
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--faint);
+}
+.role-caret {
+  font-size: 8px;
+  color: var(--faint);
+}
+.role-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+.role-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 12px;
+}
+.role-menu-item:hover {
+  background: var(--surface-2);
+}
+.role-menu-item.active {
+  background: var(--blue-soft);
+}
+.role-menu-item span {
+  color: var(--blue);
+}
+.role-menu-item i {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 9px;
+  color: var(--faint);
+  text-transform: uppercase;
+}
+.role-menu-signout {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 6px 6px;
+  background: transparent;
+  color: var(--red);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.role-menu-signout:hover {
+  background: var(--red-soft);
+}
+@media (max-width: 640px) {
+  .role-text i {
+    display: none;
   }
 }
 

@@ -5,7 +5,7 @@ import type { Manifest, MediaType, SignedAsset } from "../db/types.js";
 import { signManifest } from "../crypto/signing.js";
 import {
   audioFingerprint,
-  computePerceptualHashes,
+  computeSigningFingerprints,
   extFromMime,
   mediaTypeFromMime,
   sha256,
@@ -44,7 +44,7 @@ export async function signContent(input: SignInput): Promise<SignResult> {
   const perceptualHashes =
     mediaType === "text"
       ? []
-      : await computePerceptualHashes(contentBuf, mediaType, input.mimeType);
+      : await computeSigningFingerprints(contentBuf, mediaType, input.mimeType);
 
   // Fingerprint the audio track for video/audio, so a replaced (voice-cloned)
   // track is detectable even when the video frames still match.

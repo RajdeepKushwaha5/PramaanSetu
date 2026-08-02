@@ -29,6 +29,8 @@ import { decodeQr, extractUpiPayee } from "../fingerprint/qr.js";
 import { getFingerprintIndex } from "../fingerprint/fpIndex.js";
 import { renderPdfFirstPage } from "../fingerprint/pdf.js";
 import { assessRisk, type RiskAssessment } from "../ai/riskEngine.js";
+import { detectSynthetic } from "../detect/detectionService.js";
+import type { SyntheticAssessment } from "../detect/types.js";
 import { env } from "../config/env.js";
 
 export interface VerifyInput {
@@ -67,6 +69,7 @@ export interface VerifyResult {
     paymentTamper?: { foundPayee: string; approvedPayees: string[] };
   };
   risk?: RiskAssessment | { unavailable: true; reason: string };
+  synthetic?: SyntheticAssessment;
   message: string;
   contentHash: string;
 }
@@ -337,6 +340,18 @@ async function unverified(
   let riskLevel: string | null = null;
   let riskScore: number | null = null;
 
+  // Synthetic-media detection: for unsigned image/video/audio, answer the other
+  // half of the problem statement — is the content itself AI-generated/deepfaked?
+  // Kicked off concurrently with the phishing-risk call below (different
+  // questions on the same content) so an unsigned image isn't doubly slow.
+  const syntheticPromise: Promise<SyntheticAssessment | undefined> =
+    (mediaType === "image" || mediaType === "video" || mediaType === "audio") && input.bytes
+      ? detectSynthetic({ mediaType, bytes: input.bytes, mimeType: input.mimeType }).catch((e) => {
+          console.error("synthetic detection failed:", (e as Error).message);
+          return undefined;
+        })
+      : Promise.resolve(undefined);
+
   if (env.geminiKeys.length === 0) {
     risk = { unavailable: true, reason: "AI risk engine not configured (no Gemini keys)." };
   } else {
@@ -362,6 +377,8 @@ async function unverified(
     }
   }
 
+  const synthetic = await syntheticPromise;
+
   getStore().addEvent({
     verdict: "unverified",
     mediaType,
@@ -375,16 +392,32 @@ async function unverified(
     tamperType: null,
     riskLevel,
     riskScore,
+    syntheticScore: synthetic?.syntheticScore ?? null,
+    syntheticLabel: synthetic?.label ?? null,
   });
 
   return {
     verdict: "unverified",
     mediaType,
     risk,
-    message:
-      "No official signed record was found for this content. 'Unverified' does not prove it is fake, but treat it with caution and never pay based on it.",
+    synthetic,
+    message: syntheticMessage(synthetic),
     contentHash,
   };
+}
+
+/** Headline message for an unverified result, led by any synthetic finding. */
+function syntheticMessage(s: SyntheticAssessment | undefined): string {
+  const base =
+    "No official signed record was found for this content. 'Unverified' does not prove it is fake, but treat it with caution and never pay based on it.";
+  if (!s || (!s.aiAvailable && !s.forensicAvailable)) return base;
+  if (s.label === "likely-synthetic") {
+    return `No signed record exists AND this ${s.modality} shows strong signs of being AI-generated or manipulated (synthetic score ${s.syntheticScore}/100). Do not trust it.`;
+  }
+  if (s.label === "uncertain") {
+    return `No signed record exists, and this ${s.modality} has some synthetic-media indicators (score ${s.syntheticScore}/100). Treat it with caution.`;
+  }
+  return base;
 }
 
 interface RecordOpts {

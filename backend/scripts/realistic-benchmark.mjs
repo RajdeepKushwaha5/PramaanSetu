@@ -104,8 +104,9 @@ for (const [name, r] of Object.entries(results)) {
 }
 console.log(`\n  False-match on unrelated images   ${(100*falseMatch/unrelTot).toFixed(0).padStart(3)}%  (${falseMatch}/${unrelTot})  (lower is better)`);
 console.log(`  Latency p50 / p95                 ${lat[Math.floor(lat.length*0.5)].toFixed(1)} ms / ${lat[Math.floor(lat.length*0.95)].toFixed(1)} ms`);
-console.log("\nHonest read: recompression/scaling/screenshot are robust; crop and rotation are");
-console.log("weaker (block-average hashing is not geometry-invariant) — production would add");
-console.log("feature-based (e.g. ORB/keypoint) matching for cropped/rotated forwards.\n");
+console.log("\nHonest read: recompression, scaling, screenshots and small crops are recognised");
+console.log("(references store centre-crop fingerprint variants). Rotation is the remaining");
+console.log("gap — block-average hashing is not rotation-invariant, so a tilted forward stays");
+console.log("an honest 'unverified'; production would add feature/keypoint (ORB) matching.\n");
 
 rmSync(tmp, { recursive: true, force: true });

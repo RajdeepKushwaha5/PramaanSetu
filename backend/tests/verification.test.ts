@@ -182,3 +182,35 @@ test("video: genuine -> original, compressed -> derivative, voice-clone -> alter
   assert.equal(cloned.verdict, "altered");
   assert.match(cloned.message, /AUDIO/i);
 });
+
+// ---- synthetic-media detection (forensics-only; AI disabled in tests) ----
+
+test("unsigned AI-render-like image -> unverified, forensic synthetic signal fires", async () => {
+  const r = await verifyContent({ mimeType: "image/png", bytes: bundle.syntheticSample });
+  assert.equal(r.verdict, "unverified");
+  assert.ok(r.synthetic, "an unsigned image must carry a synthetic assessment");
+  assert.equal(r.synthetic?.forensicAvailable, true);
+  assert.equal(r.synthetic?.aiAvailable, false, "AI is disabled in tests");
+  // The flat, noiseless render should raise at least one forensic indicator.
+  assert.ok((r.synthetic?.signals.length ?? 0) > 0, "expected forensic indicators");
+});
+
+test("detector separates synthetic-looking from camera-like media (no false alarm)", async () => {
+  const synth = await verifyContent({ mimeType: "image/png", bytes: bundle.syntheticSample });
+  const real = await verifyContent({ mimeType: "image/png", bytes: bundle.authenticSample });
+  const synthScore = synth.synthetic?.syntheticScore ?? 0;
+  const realScore = real.synthetic?.syntheticScore ?? 0;
+  // The AI-render sample must score strictly higher than the noisy camera-like
+  // control — the deterministic layer must not flag everything.
+  assert.ok(
+    synthScore > realScore,
+    `expected synthetic score (${synthScore}) > camera-like score (${realScore})`,
+  );
+  assert.notEqual(real.synthetic?.label, "likely-synthetic", "camera-like control must not be called synthetic");
+});
+
+test("unsigned image detection is recorded for the SupTech dashboard", async () => {
+  const { getDashboardStats } = await import("../src/services/campaignService.js");
+  const stats = getDashboardStats() as { detection?: { mediaScanned: number } };
+  assert.ok((stats.detection?.mediaScanned ?? 0) > 0, "dashboard must tally scanned media");
+});

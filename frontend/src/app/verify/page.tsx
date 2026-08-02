@@ -17,6 +17,17 @@ interface Risk {
   unavailable?: boolean;
   reason?: string;
 }
+interface DetectionSignal { source: "ai" | "forensic"; label: string; detail: string }
+interface Synthetic {
+  modality: "image" | "video" | "audio";
+  syntheticScore: number;
+  label: "likely-authentic" | "uncertain" | "likely-synthetic";
+  aiAvailable: boolean;
+  forensicAvailable: boolean;
+  signals: DetectionSignal[];
+  summary: string;
+  framesAnalysed?: number;
+}
 interface TamperMap { grid: number; changedCells: number; cells: number[] }
 interface Match {
   title: string;
@@ -42,6 +53,7 @@ interface VerifyResult {
   mediaType: string;
   match?: Match;
   risk?: Risk;
+  synthetic?: Synthetic;
   message: string;
   contentHash?: string;
 }
@@ -74,6 +86,8 @@ const SAMPLES: { id: string; key: string; mime: string; name: string; label: str
   { id: "fp", key: "altered_pdf_expect_altered", mime: "application/pdf", name: "forged-circular.pdf", label: "forged QR · PDF", tone: "danger" },
   { id: "gv", key: "original_mp4_expect_original", mime: "video/mp4", name: "genuine-video.mp4", label: "genuine video", tone: "verified" },
   { id: "cv", key: "voiceclone_mp4_expect_altered", mime: "video/mp4", name: "voiceclone-video.mp4", label: "voice-cloned video", tone: "danger" },
+  { id: "sy", key: "synthetic_png_expect_synthetic", mime: "image/png", name: "flat-render.png", label: "flat render · detection", tone: "caution" },
+  { id: "au", key: "authentic_png_expect_authentic", mime: "image/png", name: "camera-like.png", label: "camera-like · detection", tone: "verified" },
 ];
 
 function base64ToFile(b64: string, mime: string, name: string): File {
@@ -288,7 +302,8 @@ export default function VerifyPage() {
             ["01", "Exact provenance", "SHA–256 lookup and Ed25519 signature validation."],
             ["02", "Forwarded-copy match", "Perceptual comparison tolerant to recompression."],
             ["03", "Tamper localisation", "QR payee and changed-region analysis."],
-            ["04", "Unverified risk", "Explainable AI signals; never called genuine."],
+            ["04", "Synthetic-media detection", "Deepfake / AI-generation check on unsigned media — vision & audio models plus deterministic forensics."],
+            ["05", "Unverified phishing risk", "Explainable AI signals; never called genuine."],
           ].map(([n, title, copy]) => (
             <div className="pipeline-step" key={n}>
               <span>{n}</span>
@@ -320,6 +335,8 @@ export default function VerifyPage() {
 function VerificationResult({ result, previewUrl }: { result: VerifyResult; previewUrl: string | null }) {
   const verdict = VERDICT[result.verdict];
   const risk = result.risk;
+  const synthetic = result.synthetic;
+  const showSynthetic = synthetic && (synthetic.aiAvailable || synthetic.forensicAvailable);
   return (
     <div className={`result-console ${verdict.tone}`}>
       <div className="verdict-banner">
@@ -329,16 +346,22 @@ function VerificationResult({ result, previewUrl }: { result: VerifyResult; prev
           <h2>{verdict.label}</h2>
           <p>{verdict.note}</p>
         </div>
-        {risk?.riskScore != null && (
+        {showSynthetic ? (
+          <div className={`risk-dial synth-${synthetic!.label}`}>
+            <strong>{synthetic!.syntheticScore}</strong><span>/100 SYNTHETIC</span>
+          </div>
+        ) : risk?.riskScore != null ? (
           <div className="risk-dial">
             <strong>{risk.riskScore}</strong><span>/100 RISK</span>
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="verdict-message">{result.message}</div>
 
       {result.match && <TrustChain result={result} />}
+
+      {showSynthetic && <SyntheticPanel synthetic={synthetic!} />}
 
       {result.match?.paymentTamper && (
         <div className="payment-alert">
@@ -453,6 +476,57 @@ function TrustChain({ result }: { result: VerifyResult }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+const SYNTH_LABEL: Record<Synthetic["label"], { text: string; tone: string }> = {
+  "likely-synthetic": { text: "Likely AI-generated / deepfake", tone: "danger" },
+  uncertain: { text: "Uncertain — mixed indicators", tone: "caution" },
+  "likely-authentic": { text: "No strong synthetic indicators", tone: "verified" },
+};
+
+function SyntheticPanel({ synthetic }: { synthetic: Synthetic }) {
+  const meta = SYNTH_LABEL[synthetic.label];
+  const ai = synthetic.signals.filter((s) => s.source === "ai");
+  const forensic = synthetic.signals.filter((s) => s.source === "forensic");
+  return (
+    <div className={`synth-panel ${meta.tone}`}>
+      <div className="panel-header">
+        <strong>synthetic-media detection</strong>
+        <span>AI + FORENSICS · NO PROVENANCE</span>
+      </div>
+      <div className="synth-head">
+        <div className="synth-gauge">
+          <span className="synth-score">{synthetic.syntheticScore}</span>
+          <span className="synth-max">/100</span>
+        </div>
+        <div className="synth-verdict">
+          <strong>{meta.text}</strong>
+          <p>{synthetic.summary}</p>
+          <div className="synth-sources">
+            <span className={synthetic.aiAvailable ? "on" : "off"}>vision/audio model {synthetic.aiAvailable ? "✓" : "—"}</span>
+            <span className={synthetic.forensicAvailable ? "on" : "off"}>deterministic forensics {synthetic.forensicAvailable ? "✓" : "—"}</span>
+            {synthetic.framesAnalysed ? <span className="on">{synthetic.framesAnalysed} frames analysed</span> : null}
+          </div>
+        </div>
+      </div>
+      {(ai.length > 0 || forensic.length > 0) && (
+        <div className="synth-signals">
+          {ai.length > 0 && (
+            <div className="synth-col">
+              <span className="micro-label">model indicators</span>
+              <ul>{ai.map((s, i) => <li key={`ai-${i}`}><b>{s.label}</b> — {s.detail}</li>)}</ul>
+            </div>
+          )}
+          {forensic.length > 0 && (
+            <div className="synth-col">
+              <span className="micro-label">forensic signals</span>
+              <ul>{forensic.map((s, i) => <li key={`f-${i}`}><b>{s.label}</b> — {s.detail}</li>)}</ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

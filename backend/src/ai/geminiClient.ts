@@ -45,6 +45,8 @@ export interface InlineImage {
 export interface GenerateOptions {
   prompt: string;
   images?: InlineImage[];
+  /** Inline audio/video clips (same shape as images; e.g. "audio/wav"). */
+  media?: InlineImage[];
   /** Ask Gemini to return JSON. */
   json?: boolean;
   model?: string;
@@ -79,6 +81,9 @@ export async function generate(
   ];
   for (const img of opts.images ?? []) {
     parts.push({ inlineData: { data: img.data, mimeType: img.mimeType } });
+  }
+  for (const m of opts.media ?? []) {
+    parts.push({ inlineData: { data: m.data, mimeType: m.mimeType } });
   }
 
   const LONG_COOLDOWN = 10 * 60_000; // park bad/invalid keys for 10 min

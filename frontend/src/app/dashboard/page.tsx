@@ -15,6 +15,12 @@ interface Stats {
     lowRiskUnverified: number;
     campaigns: number;
   };
+  detection?: {
+    mediaScanned: number;
+    likelySynthetic: number;
+    uncertain: number;
+    likelyAuthentic: number;
+  };
   verdictBreakdown: Record<string, number>;
   topPaymentHandles: Count[];
   topPhoneNumbers: Count[];
@@ -145,6 +151,7 @@ export default function DashboardPage() {
         <RadarStat label="SIGNED ASSETS" value={stats?.totals.signedAssets} sub={`${stats?.totals.issuers ?? 0} issuers`} />
         <RadarStat label="CONFIRMED" value={stats?.totals.confirmedFraud} sub="deterministic tamper" tone="danger" />
         <RadarStat label="SUSPECTED" value={stats?.totals.suspectedFraud} sub="high AI risk" tone="caution" />
+        <RadarStat label="SYNTHETIC" value={stats?.detection?.likelySynthetic} sub={`${stats?.detection?.mediaScanned ?? 0} media scanned`} tone="danger" />
         <RadarStat label="CAMPAIGNS" value={stats?.totals.campaigns} sub="linked clusters" tone="blue" />
       </section>
 
@@ -225,6 +232,7 @@ export default function DashboardPage() {
           <TopList title="phone numbers" code="TEL" items={stats?.topPhoneNumbers ?? []} onPick={(v) => applyFilter("phone", v)} filter={filter} type="phone" innerRef={phoneRef} />
           <TopList title="impersonated entities" code="ENT" items={stats?.topImpersonatedEntities ?? []} onPick={(v) => applyFilter("entity", v)} filter={filter} type="entity" innerRef={entitiesRef} />
           <VerdictList items={stats?.verdictBreakdown ?? {}} />
+          <DetectionPanel detection={stats?.detection} />
         </div>
       </section>
     </main>
@@ -325,6 +333,34 @@ function TopList({ title, code, items, onPick, filter, type, innerRef }: { title
           </button>
         );
       }) : <div className="empty-state">No indicators observed</div>}
+    </div>
+  );
+}
+
+function DetectionPanel({ detection }: { detection?: Stats["detection"] }) {
+  const d = detection ?? { mediaScanned: 0, likelySynthetic: 0, uncertain: 0, likelyAuthentic: 0 };
+  const rows: { label: string; value: number; tone: string }[] = [
+    { label: "likely synthetic", value: d.likelySynthetic, tone: "bad" },
+    { label: "uncertain", value: d.uncertain, tone: "warn" },
+    { label: "likely authentic", value: d.likelyAuthentic, tone: "good" },
+  ];
+  return (
+    <div className="toplist-panel">
+      <div className="panel-header"><strong>synthetic-media detection</strong><span>MEDIA</span></div>
+      {d.mediaScanned === 0 ? (
+        <div className="empty-state">No media scanned yet — verify an image, video, or audio file</div>
+      ) : (
+        <>
+          {rows.map((r, i) => (
+            <div className="toplist-row static" key={r.label}>
+              <span>{(i + 1).toString().padStart(2, "0")}</span>
+              <strong className={`detect-${r.tone}`}>{r.label}</strong>
+              <b>{r.value}</b>
+            </div>
+          ))}
+          <div className="detect-foot">{d.mediaScanned} unsigned media file{d.mediaScanned === 1 ? "" : "s"} scanned for AI-generation / deepfake artefacts</div>
+        </>
+      )}
     </div>
   );
 }

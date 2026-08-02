@@ -196,6 +196,10 @@ export function getDashboardStats() {
   let genuine = 0;
   let revoked = 0;
   let expired = 0;
+  // Synthetic-media detection tallies (unsigned image/video/audio scans).
+  let synthScanned = 0;
+  let synthLikely = 0;
+  let synthUncertain = 0;
   const verdictBreakdown: Record<string, number> = {};
   for (const e of events) {
     const sev = severityOf(e);
@@ -206,6 +210,11 @@ export function getDashboardStats() {
     else if (e.verdict === "expired") expired++;
     else genuine++; // original / derivative only
     verdictBreakdown[e.verdict] = (verdictBreakdown[e.verdict] ?? 0) + 1;
+    if (e.syntheticScore != null) {
+      synthScanned++;
+      if (e.syntheticLabel === "likely-synthetic") synthLikely++;
+      else if (e.syntheticLabel === "uncertain") synthUncertain++;
+    }
   }
   const fraud = events.filter((e) => severityOf(e) !== "low");
 
@@ -220,6 +229,12 @@ export function getDashboardStats() {
       suspectedFraud: suspected,
       lowRiskUnverified: lowUnverified,
       campaigns: getCampaigns().length,
+    },
+    detection: {
+      mediaScanned: synthScanned,
+      likelySynthetic: synthLikely,
+      uncertain: synthUncertain,
+      likelyAuthentic: synthScanned - synthLikely - synthUncertain,
     },
     verdictBreakdown,
     topPaymentHandles: topCounts(fraud.flatMap((e) => e.paymentHandles)),

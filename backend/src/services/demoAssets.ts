@@ -66,12 +66,63 @@ async function buildCircularPdf(upiPayload: string): Promise<Buffer> {
   return Buffer.from(await pdf.save());
 }
 
+/**
+ * A deliberately "rendered-looking" image: smooth gradients, a soft blurred
+ * subject, and no sensor noise. It is UNSIGNED, so verifying it exercises the
+ * synthetic-media detector — the deterministic forensics flag the flat
+ * compression residual and over-uniform noise typical of AI-generated imagery.
+ * (For a live demo, uploading a real AI face render exercises the vision model
+ * too; this built-in sample makes the forensic path demoable offline.)
+ */
+async function buildSyntheticLookingImage(): Promise<Buffer> {
+  const w = 360;
+  const h = 360;
+  const img = new Jimp({ width: w, height: h, color: 0xffffffff });
+  const d = img.bitmap.data;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Smooth radial + linear gradient, no high-frequency detail at all.
+      const dx = (x - w / 2) / (w / 2);
+      const dy = (y - h * 0.42) / (h / 2);
+      const r = Math.sqrt(dx * dx + dy * dy);
+      const glow = Math.max(0, 1 - r * 0.9);
+      const i = (y * w + x) * 4;
+      d[i] = Math.round(60 + 150 * glow + 30 * (x / w));
+      d[i + 1] = Math.round(70 + 120 * glow + 20 * (y / h));
+      d[i + 2] = Math.round(110 + 120 * glow);
+      d[i + 3] = 255;
+    }
+  }
+  // Lossless PNG: keeps the flat, noiseless surface intact so the forensic ELA
+  // and noise-uniformity cues reflect the render itself, not JPEG artefacts.
+  return img.getBuffer("image/png");
+}
+
+/**
+ * A "camera-like" control: the same scene with realistic per-pixel sensor
+ * noise, so the forensic detector reads it as natural (a useful contrast that
+ * shows the detector does NOT just flag everything).
+ */
+async function buildAuthenticLookingImage(): Promise<Buffer> {
+  const base = await Jimp.read(await buildSyntheticLookingImage());
+  const d = base.bitmap.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 70; // sensor-like noise
+    d[i] = Math.max(0, Math.min(255, d[i] + n));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n));
+  }
+  return base.getBuffer("image/png");
+}
+
 export interface DemoBundle {
   originalPng: Buffer;
   compressedJpg: Buffer; // -> Derivative
   alteredPng: Buffer; // -> Altered (swapped payment QR)
   originalPdf: Buffer; // signed reference PDF circular
   alteredPdf: Buffer; // -> Altered (forged PDF, swapped payment QR)
+  syntheticSample: Buffer; // unsigned, AI-render-like -> synthetic detection
+  authenticSample: Buffer; // unsigned, camera-like control
   approvedUpi: string;
   fraudUpi: string;
 }
@@ -82,12 +133,16 @@ export async function makeDemoBundle(): Promise<DemoBundle> {
   const alteredPng = await buildCircular(FRAUD_UPI);
   const originalPdf = await buildCircularPdf(APPROVED_UPI);
   const alteredPdf = await buildCircularPdf(FRAUD_UPI);
+  const syntheticSample = await buildSyntheticLookingImage();
+  const authenticSample = await buildAuthenticLookingImage();
   return {
     originalPng,
     compressedJpg,
     alteredPng,
     originalPdf,
     alteredPdf,
+    syntheticSample,
+    authenticSample,
     approvedUpi: "sebi@valid",
     fraudUpi: "fraudster12@ybl",
   };

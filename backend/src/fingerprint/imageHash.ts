@@ -20,9 +20,16 @@ import { Jimp } from "jimp";
 const GRID = 32; // 32x32 = 1024 cells, 3 channels each
 const DELTA = 30; // per-channel change (0-255) counted as "changed"
 
-/** Returns base64 of GRID*GRID*3 bytes (R,G,B per cell). */
-export async function imageFingerprint(buffer: Buffer): Promise<string> {
-  const img = await Jimp.read(buffer);
+// Minimal structural type: everything gridFromJimp needs, so it accepts a
+// Jimp.read() result, a .clone(), a .crop(), etc. without fighting Jimp's
+// overloaded instance typings.
+interface JimpLike {
+  bitmap: { data: Buffer };
+  resize(opts: { w: number; h: number }): unknown;
+}
+
+/** Reduce a Jimp image (mutated: resized) to the GRID*GRID*3 colour signature. */
+function gridFromJimp(img: JimpLike): string {
   img.resize({ w: GRID, h: GRID });
   const d = img.bitmap.data; // RGBA
   const cells = Buffer.alloc(GRID * GRID * 3);
@@ -32,6 +39,49 @@ export async function imageFingerprint(buffer: Buffer): Promise<string> {
     cells[i * 3 + 2] = d[i * 4 + 2];
   }
   return cells.toString("base64");
+}
+
+/** Returns base64 of GRID*GRID*3 bytes (R,G,B per cell). */
+export async function imageFingerprint(buffer: Buffer): Promise<string> {
+  return gridFromJimp(await Jimp.read(buffer));
+}
+
+/**
+ * Geometry-robust fingerprint SET for a signed reference image.
+ *
+ * Block-average hashing is not geometry-invariant, so a genuine forward that was
+ * cropped would otherwise miss its own signed record. We fix this on the SIGNING
+ * side (not the probe side): store, alongside the base fingerprint, a few
+ * pre-transformed centre-crop variants. A cropped probe then matches the
+ * corresponding stored variant via the existing changed-cell comparison.
+ *
+ * This only augments the reference set; the probe stays a single fingerprint, so
+ * the strict changed-cell thresholds still gate every match. The realistic
+ * benchmark (`npm run benchmark:real`) verifies this lifts crop recall to 100%
+ * WITHOUT introducing false matches on unrelated images.
+ *
+ * Rotation is deliberately NOT augmented: small rotations land in the "altered"
+ * band rather than matching cleanly, which would raise a false tamper alarm on a
+ * genuinely tilted forward. Rotation-invariant matching needs feature/keypoint
+ * methods (ORB/SIFT) and is left as documented production work; a tilted forward
+ * stays an honest "unverified".
+ */
+export async function robustImageFingerprints(buffer: Buffer): Promise<string[]> {
+  const base = await Jimp.read(buffer);
+  const w = base.bitmap.width;
+  const h = base.bitmap.height;
+  const out: string[] = [gridFromJimp(base.clone())];
+
+  // Centre-crop variants (border fraction removed), robust to cropped forwards.
+  for (const b of [0.05, 0.1]) {
+    const cx = Math.round(w * b);
+    const cy = Math.round(h * b);
+    if (w - 2 * cx < 8 || h - 2 * cy < 8) continue;
+    const c = base.clone().crop({ x: cx, y: cy, w: w - 2 * cx, h: h - 2 * cy });
+    out.push(gridFromJimp(c));
+  }
+
+  return out;
 }
 
 function cellChanged(a: Buffer, b: Buffer, cell: number): boolean {

@@ -151,6 +151,8 @@ seedRouter.post("/", async (req, res) => {
       altered_png_expect_altered: bundle.alteredPng.toString("base64"),
       original_pdf_expect_original: bundle.originalPdf.toString("base64"),
       altered_pdf_expect_altered: bundle.alteredPdf.toString("base64"),
+      synthetic_png_expect_synthetic: bundle.syntheticSample.toString("base64"),
+      authentic_png_expect_authentic: bundle.authenticSample.toString("base64"),
       ...demoVideos,
     },
   });

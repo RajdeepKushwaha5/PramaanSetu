@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { RoleSwitcher } from "@/components/role";
 
 const NAV = [
   { href: "/", label: "overview" },
@@ -95,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="header-actions">
+          <RoleSwitcher />
           <span className="system-pill">
             <i />
             system live

@@ -103,6 +103,9 @@ export interface VerificationEvent {
   tamperType: string | null; // e.g. "payment_qr_swap"
   riskLevel: string | null;
   riskScore: number | null;
+  // Synthetic-media detection (populated for unsigned image/video/audio):
+  syntheticScore?: number | null; // 0-100, higher = more likely AI-generated
+  syntheticLabel?: string | null; // likely-authentic | uncertain | likely-synthetic
 }
 
 export interface DbShape {

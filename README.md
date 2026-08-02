@@ -29,9 +29,14 @@ PramaanSetu separates those questions:
 1. Can the content be matched to a signed communication?
 2. Does the issuer signature validate?
 3. Was the content copied, recompressed, or altered?
-4. If no provenance exists, does the message contain phishing signals?
+4. If no provenance exists, is the media itself AI-generated or a deepfake, and
+   does the message contain phishing signals?
 5. Do multiple reports share the same payment handle, phone number, domain, or
    impersonated entity?
+
+This covers both halves of Problem Statement 1: **detecting** malicious
+synthetic content (deepfake images/video, synthetic voice, AI phishing) and
+**verifying** that legitimate financial communications are genuine.
 
 ## What the project includes
 
@@ -47,6 +52,28 @@ hash-chained transparency log.
 An investor can paste a message or upload a file. The verifier checks exact
 provenance first, then perceptual similarity and payment QR integrity. Gemini
 is used only when no signed match can be found.
+
+### Synthetic-media detection
+
+When content has no provenance match, PramaanSetu asks the second question:
+is the media itself AI-generated or a deepfake? Each modality is scored 0–100
+by combining two independent layers so a verdict still appears if the model is
+rate-limited:
+
+- **Image** — a Gemini vision prompt tuned for GAN/diffusion and face-swap
+  artefacts, plus deterministic forensics (error-level analysis and
+  noise-uniformity cues).
+- **Video** — representative frames are sampled with FFmpeg and scored for
+  deepfake cues (per-frame and cross-frame), combined with an audio check.
+- **Audio** — a Gemini audio prompt for synthetic/cloned speech, plus
+  deterministic spectral-stability and noise-floor forensics.
+- **Text** — the phishing risk engine (below) extracts scam signals and
+  indicators.
+
+The model leads (0.68) and forensics corroborate (0.32) when both are
+available; forensic-only scores are capped so heuristics never over-convict a
+real photo. The detector deliberately shows restraint — a genuine photo or a
+plain digital graphic is not flagged as synthetic.
 
 ### SupTech radar
 
@@ -125,6 +152,12 @@ colour block grid. Up to 4 changed cells is treated as a recompressed copy.
 Between 5 and 300 changed cells is treated as a possible alteration. These
 thresholds are prototype values and need calibration on real forwarded media.
 
+When no signed record matches at all, an `unverified` image, video, or audio
+file additionally receives a **synthetic-media assessment** (a 0–100 score with
+a `likely-authentic` / `uncertain` / `likely-synthetic` label). `unverified`
+still never means "fake" on its own — the synthetic score is a separate
+detection signal shown alongside the phishing risk.
+
 ## Evaluation
 
 The repository contains a reproducible benchmark for the deterministic layer.
@@ -168,17 +201,22 @@ Latest local run (12 signed circulars, AI disabled):
 | JPEG q70 | 100% |
 | Screenshot (down + up resample) | 100% |
 | Scale 85% | 100% |
-| Crop 5% border | 0% |
+| Crop 5% border | 100% |
 | Rotate 2° | 0% |
 | False match on unrelated images | 0% |
 
 **Honest read:** the block-average fingerprint is robust to the most common
-real-world forwards — re-compression, screenshots, and scaling — and produces
-no false matches, but it is not geometry-invariant, so cropped or rotated
-forwards are not recognised. Production would add feature/keypoint-based
-matching (e.g. ORB) for those cases. This is a synthetic-content benchmark; a
-held-out set from real WhatsApp/Telegram forwarding and camera photos is still
-future work.
+real-world forwards — re-compression, screenshots, scaling, and small crops —
+and produces no false matches. Crop tolerance comes from storing a few
+centre-crop fingerprint variants on the *signing* side, so the probe path and
+its strict changed-cell thresholds are unchanged (the false-match rate stays
+0%). Rotation is the remaining gap: block-average hashing is not
+rotation-invariant, so a rotation variant lands in the "altered" band rather
+than matching cleanly — augmenting it would raise a false tamper alarm, so a
+tilted forward is deliberately left as an honest "unverified". Production would
+add feature/keypoint-based matching (e.g. ORB) for rotation. This is a
+synthetic-content benchmark; a held-out set from real WhatsApp/Telegram
+forwarding and camera photos is still future work.
 
 ### Scalability
 
@@ -220,7 +258,7 @@ Run the backend test suite from the repository root:
 npm test
 ```
 
-The current suite contains 14 tests covering:
+The current suite contains 17 tests covering:
 
 - exact signed images and text
 - recompressed image matching
@@ -230,6 +268,10 @@ The current suite contains 14 tests covering:
 - transparency log integrity
 - campaign creation from a QR fraud event
 - signed evidence packs
+- video verification (genuine / recompressed / voice-clone)
+- synthetic-media detection: forensic signal fires on AI-render-like media,
+  separates it from camera-like media with no false alarm, and is tallied for
+  the SupTech dashboard
 
 Run the full static checks with:
 
@@ -360,6 +402,7 @@ pramaansetu/
 │   └── src/lib/api.ts           Backend URL helper
 ├── backend/
 │   ├── src/ai/                  Gemini client, key pool, and risk engine
+│   ├── src/detect/              Synthetic-media detection (vision/audio + forensics)
 │   ├── src/crypto/              Ed25519 signing helpers
 │   ├── src/db/                  JSON store and shared types
 │   ├── src/fingerprint/         Hashing, image, video, and QR checks
@@ -471,9 +514,12 @@ signing rail, verdict engine, campaign graph, and evidence flow stay as they are
 ### Already built (beyond the original plan)
 
 Image, PDF (page rendering + QR extraction), video (frame fingerprinting), and
-audio (voice-clone / audio-replacement) verification; QR payment-tamper
-detection; a tamper heatmap; issuer revocation; a stable-ID campaign graph;
-signed evidence export; a Telegram channel; and an LSH scalability index.
+audio (voice-clone / audio-replacement) verification; **synthetic-media
+detection** (deepfake image/video and synthetic-voice scoring via a vision/audio
+model plus deterministic forensics); QR payment-tamper detection; a tamper
+heatmap; issuer revocation; a stable-ID campaign graph; signed evidence export;
+a Telegram channel; a mock role login (Investor / Issuer / Regulator); and an
+LSH scalability index.
 
 ## Technology
 
