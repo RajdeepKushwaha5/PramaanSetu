@@ -32,18 +32,18 @@ const SEED_ISSUERS: SeedIssuer[] = [
 // onboarding. In production a crawler ingests the full public SEBI/exchange
 // corpus; here we seed a representative set.
 const SEED_ANNOUNCEMENTS = [
-  { reg: "SEBI-IND-0001", title: "Investor Advisory: Beware of Fake Trading Apps", text: "SEBI advises investors to deal only with registered intermediaries. Verify UPI handles ending in @valid before any payment. SEBI never guarantees returns.", url: "https://www.sebi.gov.in/investors" },
-  { reg: "SEBI-IND-0001", title: "SEBI Check: Verify Intermediary UPI and Bank Details", text: "Before paying any intermediary, verify the UPI ID, bank account and IFSC using SEBI Check on the SEBI SCORES / SAARTHI app.", url: "https://www.sebi.gov.in/sebi_check" },
-  { reg: "SEBI-IND-0001", title: "Caution against Deepfake and Impersonation Content", text: "SEBI cautions investors against deepfake videos and social media posts impersonating SEBI officials, exchanges and market experts promising assured returns.", url: "https://www.sebi.gov.in/media" },
-  { reg: "SEBI-IND-0001", title: "Master Circular for Stock Brokers", text: "Consolidated directions applicable to stock brokers, including client funds, reporting obligations and technology governance.", url: "https://www.sebi.gov.in/legal/master-circulars" },
-  { reg: "SEBI-IND-0001", title: "Advisory on Unregistered Investment Advisers", text: "Investors are advised to deal only with SEBI-registered investment advisers. Verify registration on the SEBI website before acting on any advice.", url: "https://www.sebi.gov.in/intermediaries" },
-  { reg: "NSE-EXCH-0002", title: "NSE Circular: Revised Trading Hours", text: "NSE notifies revised trading hours effective next settlement cycle. Members are advised to update systems accordingly.", url: "https://www.nseindia.com/circulars" },
-  { reg: "NSE-EXCH-0002", title: "NSE Circular: Verified Trading App Advisory", text: "NSE advises investors to download trading applications only from official app stores and verified member sources.", url: "https://www.nseindia.com/circulars" },
-  { reg: "NSE-EXCH-0002", title: "NSE Circular: Margin Reporting Framework Update", text: "Members are notified of updates to the margin reporting framework effective from the next settlement cycle.", url: "https://www.nseindia.com/circulars" },
-  { reg: "NSE-EXCH-0002", title: "NSE Circular: Guidance on Social Media Solicitation", text: "Members shall not solicit clients through unverified social media channels promising assured returns.", url: "https://www.nseindia.com/circulars" },
-  { reg: "INE002A01018", title: "RIL Q1 Results Announcement", text: "Reliance Industries announces Q1 results. Official disclosures are available only on the exchange filing portal.", url: "https://www.ril.com/investors" },
-  { reg: "INE002A01018", title: "RIL Investor Notice: Beware of Fake Dividend Messages", text: "Reliance Industries cautions shareholders against fraudulent messages requesting payment to claim dividends or bonus shares.", url: "https://www.ril.com/investors" },
-  { reg: "INE002A01018", title: "RIL Board Meeting Intimation", text: "Intimation of the board meeting to consider and approve financial results. Official filings are on the exchange portals only.", url: "https://www.ril.com/investors" },
+  { reg: "SEBI-IND-0001", title: "Investor Advisory: Beware of Fake Trading Apps", text: "SEBI advises investors to deal only with registered intermediaries. Verify UPI handles ending in @valid before any payment. SEBI never guarantees returns.", url: "https://www.sebi.gov.in" },
+  { reg: "SEBI-IND-0001", title: "SEBI Check: Verify Intermediary UPI and Bank Details", text: "Before paying any intermediary, verify the UPI ID, bank account and IFSC using SEBI Check on the SEBI SCORES / SAARTHI app.", url: "https://www.sebi.gov.in" },
+  { reg: "SEBI-IND-0001", title: "Caution against Deepfake and Impersonation Content", text: "SEBI cautions investors against deepfake videos and social media posts impersonating SEBI officials, exchanges and market experts promising assured returns.", url: "https://www.sebi.gov.in" },
+  { reg: "SEBI-IND-0001", title: "Master Circular for Stock Brokers", text: "Consolidated directions applicable to stock brokers, including client funds, reporting obligations and technology governance.", url: "https://www.sebi.gov.in" },
+  { reg: "SEBI-IND-0001", title: "Advisory on Unregistered Investment Advisers", text: "Investors are advised to deal only with SEBI-registered investment advisers. Verify registration on the SEBI website before acting on any advice.", url: "https://www.sebi.gov.in" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Revised Trading Hours", text: "NSE notifies revised trading hours effective next settlement cycle. Members are advised to update systems accordingly.", url: "https://www.nseindia.com" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Verified Trading App Advisory", text: "NSE advises investors to download trading applications only from official app stores and verified member sources.", url: "https://www.nseindia.com" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Margin Reporting Framework Update", text: "Members are notified of updates to the margin reporting framework effective from the next settlement cycle.", url: "https://www.nseindia.com" },
+  { reg: "NSE-EXCH-0002", title: "NSE Circular: Guidance on Social Media Solicitation", text: "Members shall not solicit clients through unverified social media channels promising assured returns.", url: "https://www.nseindia.com" },
+  { reg: "INE002A01018", title: "RIL Q1 Results Announcement", text: "Reliance Industries announces Q1 results. Official disclosures are available only on the exchange filing portal.", url: "https://www.ril.com" },
+  { reg: "INE002A01018", title: "RIL Investor Notice: Beware of Fake Dividend Messages", text: "Reliance Industries cautions shareholders against fraudulent messages requesting payment to claim dividends or bonus shares.", url: "https://www.ril.com" },
+  { reg: "INE002A01018", title: "RIL Board Meeting Intimation", text: "Intimation of the board meeting to consider and approve financial results. Official filings are on the exchange portals only.", url: "https://www.ril.com" },
 ];
 
 seedRouter.post("/", async (req, res) => {
@@ -104,7 +104,7 @@ seedRouter.post("/", async (req, res) => {
       title: circularTitle,
       mimeType: "image/png",
       bytes: bundle.originalPng,
-      authoritativeUrl: "https://www.sebi.gov.in/circulars",
+      authoritativeUrl: "https://www.sebi.gov.in",
     });
     signed.push(circularTitle);
   }
@@ -115,7 +115,7 @@ seedRouter.post("/", async (req, res) => {
       title: pdfTitle,
       mimeType: "application/pdf",
       bytes: bundle.originalPdf,
-      authoritativeUrl: "https://www.sebi.gov.in/circulars",
+      authoritativeUrl: "https://www.sebi.gov.in",
     });
     signed.push(pdfTitle);
   }
@@ -131,7 +131,7 @@ seedRouter.post("/", async (req, res) => {
         title: videoTitle,
         mimeType: "video/mp4",
         bytes: videos.originalMp4,
-        authoritativeUrl: "https://www.sebi.gov.in/media",
+        authoritativeUrl: "https://www.sebi.gov.in",
       });
       signed.push(videoTitle);
     }
@@ -150,7 +150,7 @@ seedRouter.post("/", async (req, res) => {
         title: audioTitle,
         mimeType: "audio/mp4",
         bytes: audio.originalM4a,
-        authoritativeUrl: "https://www.sebi.gov.in/media",
+        authoritativeUrl: "https://www.sebi.gov.in",
       });
       signed.push(audioTitle);
     }

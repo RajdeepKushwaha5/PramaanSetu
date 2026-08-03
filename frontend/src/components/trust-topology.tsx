@@ -143,6 +143,14 @@ export function TrustTopology() {
 
   const current = BEATS[beat];
 
+  // Respect reduced-motion: stop autoplay so captions don't change on their own.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPlaying(false);
+    }
+  }, []);
+
   // Auto-advance while playing.
   useEffect(() => {
     if (!playing) return;
@@ -166,8 +174,8 @@ export function TrustTopology() {
       <svg
         className="trust-topology"
         viewBox="0 0 550 460"
-        role="img"
-        aria-label="Interactive PramaanSetu trust flow: a forged circular travels from content intake through the trust engine, registry match, tamper detection, investor warning, evidence export, and campaign linking."
+        role="group"
+        aria-label="Interactive PramaanSetu trust flow: a forged circular travels from content intake through the trust engine, registry match, tamper detection, investor warning, evidence export, and campaign linking. Each node opens its product surface."
       >
         <defs>
           <marker id="flow-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
@@ -230,12 +238,12 @@ export function TrustTopology() {
       </svg>
 
       <div className="topology-story">
-        <div className="topology-story-line">
+        <div className="topology-story-line" aria-live="polite">
           <span className={`topology-chip tone-${current.tone}`}>{current.chip}</span>
           <p>{current.caption}</p>
         </div>
         <div className="topology-controls">
-          <div className="topology-progress" aria-hidden="true">
+          <div className="topology-progress">
             {BEATS.map((b, i) => (
               <button
                 key={b.chip}

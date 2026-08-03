@@ -81,6 +81,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved === "investor" || saved === "issuer" || saved === "regulator") {
         setRoleState(saved);
+        document.documentElement.dataset.role = saved;
       }
       setReady(true);
     }, 0);
@@ -91,6 +92,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     (next: Role) => {
       setRoleState(next);
       window.localStorage.setItem(STORAGE_KEY, next);
+      document.documentElement.dataset.role = next;
     },
     [],
   );
@@ -98,6 +100,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(() => {
     setRoleState(null);
     window.localStorage.removeItem(STORAGE_KEY);
+    delete document.documentElement.dataset.role;
     router.push("/");
   }, [router]);
 
@@ -158,6 +161,7 @@ function MockLoginGate() {
 export function RoleSwitcher() {
   const { role, ready, setRole, signOut } = useRole();
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   if (!ready || role === null) return null;
   const meta = ROLE_META[role];
@@ -181,6 +185,7 @@ export function RoleSwitcher() {
               onClick={() => {
                 setRole(r);
                 setOpen(false);
+                router.push(ROLE_META[r].surface);
               }}
             >
               <span>{ROLE_META[r].glyph}</span>
@@ -192,6 +197,47 @@ export function RoleSwitcher() {
             sign out
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+export function RoleSurfaceNotice({
+  surface,
+  title,
+  children,
+  soft = false,
+}: {
+  surface: Role;
+  title: string;
+  children: React.ReactNode;
+  soft?: boolean;
+}) {
+  const { role, setRole } = useRole();
+  const router = useRouter();
+  const allowed = role === surface;
+
+  if (allowed && soft) return null;
+
+  return (
+    <div className={`role-surface-notice ${allowed ? "allowed" : "blocked"}`}>
+      <div>
+        <span className="micro-label">
+          {allowed ? `${ROLE_META[surface].label.toUpperCase()} MODE ACTIVE` : "ROLE MISMATCH"}
+        </span>
+        <strong>{title}</strong>
+        <p>{children}</p>
+      </div>
+      {!allowed && (
+        <button
+          type="button"
+          onClick={() => {
+            setRole(surface);
+            router.push(ROLE_META[surface].surface);
+          }}
+        >
+          switch to {ROLE_META[surface].label.toLowerCase()} →
+        </button>
       )}
     </div>
   );

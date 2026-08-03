@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
+import { RoleSurfaceNotice, useRole } from "@/components/role";
 
 interface Count { value: string; count: number }
 interface Stats {
@@ -45,13 +46,30 @@ interface Campaign {
 
 type FilterType = "upi" | "phone" | "entity";
 interface Filter { type: FilterType; value: string }
+type ActiveNav = "campaigns" | "upi" | "entities" | "phone" | "evidence";
+
+async function downloadJson(path: string, filename: string) {
+  const response = await fetch(apiUrl(path));
+  if (!response.ok) throw new Error("Export failed");
+  const data = await response.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 
 export default function DashboardPage() {
+  const { role } = useRole();
   const [stats, setStats] = useState<Stats | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
-  const [activeNav, setActiveNav] = useState("campaigns");
+  const [activeNav, setActiveNav] = useState<ActiveNav>("campaigns");
   const [filter, setFilter] = useState<Filter | null>(null);
 
   const campaignsRef = useRef<HTMLDivElement>(null);
@@ -84,8 +102,9 @@ export default function DashboardPage() {
     };
   }, [load]);
 
-  function goTo(id: string, ref: React.RefObject<HTMLDivElement | null>) {
+  function goTo(id: ActiveNav, ref: React.RefObject<HTMLDivElement | null>) {
     setActiveNav(id);
+    if (id !== "campaigns") return;
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -93,6 +112,15 @@ export default function DashboardPage() {
     setFilter((prev) => (prev?.type === type && prev.value === value ? null : { type, value }));
     setActiveNav("campaigns");
     campaignsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function exportSnapshot() {
+    setError(null);
+    try {
+      await downloadJson("/api/evidence", `pramaansetu-intelligence-${Date.now()}.json`);
+    } catch {
+      setError("Evidence export failed — could not reach the intelligence service.");
+    }
   }
 
   function matchesFilter(c: Campaign): boolean {
@@ -103,8 +131,9 @@ export default function DashboardPage() {
   }
 
   const visibleCampaigns = campaigns.filter(matchesFilter);
+  const canExport = role === "regulator";
 
-  const NAV: { id: string; icon: string; label: string; count: number; ref: React.RefObject<HTMLDivElement | null> }[] = [
+  const NAV: { id: ActiveNav; icon: string; label: string; count: number; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "campaigns", icon: "◫", label: "Campaigns", count: campaigns.length, ref: campaignsRef },
     { id: "upi", icon: "⌁", label: "UPI handles", count: stats?.topPaymentHandles.length ?? 0, ref: upiRef },
     { id: "entities", icon: "◇", label: "Entities", count: stats?.topImpersonatedEntities.length ?? 0, ref: entitiesRef },
@@ -133,15 +162,25 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <RoleSurfaceNotice surface="regulator" title="Regulator evidence controls">
+        Campaign review is visible for demo transparency, but exporting signed evidence bundles is a regulator operation.
+      </RoleSurfaceNotice>
+
       <section className="radar-statusbar">
         <div>
           <span className="live-mark"><i /> LIVE INGESTION</span>
           <span>refresh / 5s</span>
           <span>{updatedAt ? `updated ${updatedAt.toLocaleTimeString()}` : "connecting…"}</span>
         </div>
-        <a className="button" href={apiUrl("/api/evidence")} target="_blank" rel="noreferrer">
-          export intelligence snapshot ↗
-        </a>
+        <button
+          type="button"
+          className="intelligence-export"
+          disabled={!canExport}
+          onClick={() => void exportSnapshot()}
+        >
+          <span>{canExport ? "export intelligence snapshot" : "regulator mode required"}</span>
+          <b aria-hidden="true">↗</b>
+        </button>
       </section>
 
       {error && <div className="error-box radar-error">{error}</div>}
@@ -185,16 +224,22 @@ export default function DashboardPage() {
         <div className="campaign-workspace" ref={campaignsRef}>
           <div className="campaign-toolbar">
             <div>
-              <span className="micro-label">ACTIVE CAMPAIGNS</span>
-              <strong>{visibleCampaigns.length.toString().padStart(2, "0")} / PRIORITY QUEUE</strong>
+              <span className="micro-label">{activeNav === "campaigns" ? "ACTIVE CAMPAIGNS" : "RADAR INDEX"}</span>
+              <strong>{consoleTitle(activeNav, visibleCampaigns.length, stats)}</strong>
             </div>
-            <div className="toolbar-legend">
-              <span><i className="red" /> confirmed</span>
-              <span><i className="orange" /> suspected</span>
-            </div>
+            {activeNav === "campaigns" ? (
+              <div className="toolbar-legend">
+                <span><i className="red" /> confirmed</span>
+                <span><i className="orange" /> suspected</span>
+              </div>
+            ) : (
+              <button type="button" className="console-back" onClick={() => setActiveNav("campaigns")}>
+                view campaigns ↩
+              </button>
+            )}
           </div>
 
-          {filter && (
+          {activeNav === "campaigns" && filter && (
             <div className="filter-banner">
               <span>
                 Filtered by {filter.type === "upi" ? "UPI handle" : filter.type === "phone" ? "phone" : "entity"}:
@@ -204,18 +249,29 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {visibleCampaigns.length === 0 ? (
-            <div className="campaign-empty">
-              <div className="radar-scope"><i /><i /><i /></div>
-              <strong>{filter ? "NO CAMPAIGNS SHARE THIS INDICATOR" : "NO ACTIVE FRAUD CAMPAIGNS"}</strong>
-              <p>{filter ? "Try clearing the filter." : "Verify a scam message or altered document to populate the intelligence graph."}</p>
-            </div>
+          {activeNav === "campaigns" ? (
+            visibleCampaigns.length === 0 ? (
+              <div className="campaign-empty">
+                <div className="radar-scope"><i /><i /><i /></div>
+                <strong>{filter ? "NO CAMPAIGNS SHARE THIS INDICATOR" : "NO ACTIVE FRAUD CAMPAIGNS"}</strong>
+                <p>{filter ? "Try clearing the filter." : "Verify a scam message or altered document to populate the intelligence graph."}</p>
+              </div>
+            ) : (
+              <div className="campaign-list">
+                {visibleCampaigns.map((campaign, index) => (
+                  <CampaignCard campaign={campaign} index={index} key={campaign.id} onIndicator={applyFilter} filter={filter} canExport={canExport} />
+                ))}
+              </div>
+            )
           ) : (
-            <div className="campaign-list">
-              {visibleCampaigns.map((campaign, index) => (
-                <CampaignCard campaign={campaign} index={index} key={campaign.id} onIndicator={applyFilter} filter={filter} />
-              ))}
-            </div>
+            <ConsoleTab
+              activeNav={activeNav}
+              stats={stats}
+              campaigns={campaigns}
+              filter={filter}
+              onPick={applyFilter}
+              canExport={canExport}
+            />
           )}
         </div>
       </section>
@@ -239,6 +295,100 @@ export default function DashboardPage() {
   );
 }
 
+function consoleTitle(activeNav: ActiveNav, campaignCount: number, stats: Stats | null): string {
+  if (activeNav === "campaigns") return `${campaignCount.toString().padStart(2, "0")} / PRIORITY QUEUE`;
+  if (activeNav === "upi") return `${(stats?.topPaymentHandles.length ?? 0).toString().padStart(2, "0")} / PAYMENT HANDLES`;
+  if (activeNav === "entities") return `${(stats?.topImpersonatedEntities.length ?? 0).toString().padStart(2, "0")} / IMPERSONATED ENTITIES`;
+  if (activeNav === "phone") return `${(stats?.topPhoneNumbers.length ?? 0).toString().padStart(2, "0")} / PHONE INDICATORS`;
+  return `${(stats?.totals.totalVerifications ?? 0).toString().padStart(2, "0")} / EVIDENCE EVENTS`;
+}
+
+function ConsoleTab({
+  activeNav,
+  stats,
+  campaigns,
+  filter,
+  onPick,
+  canExport,
+}: {
+  activeNav: Exclude<ActiveNav, "campaigns">;
+  stats: Stats | null;
+  campaigns: Campaign[];
+  filter: Filter | null;
+  onPick: (type: FilterType, value: string) => void;
+  canExport: boolean;
+}) {
+  if (activeNav === "upi") {
+    return (
+      <div className="console-tab-panel">
+        <TopList title="payment handles" code="UPI" items={stats?.topPaymentHandles ?? []} onPick={(v) => onPick("upi", v)} filter={filter} type="upi" />
+        <LinkedCampaignPreview title="campaigns using payment handles" campaigns={campaigns.filter((c) => c.paymentHandles.length > 0)} />
+      </div>
+    );
+  }
+
+  if (activeNav === "entities") {
+    return (
+      <div className="console-tab-panel">
+        <TopList title="impersonated entities" code="ENT" items={stats?.topImpersonatedEntities ?? []} onPick={(v) => onPick("entity", v)} filter={filter} type="entity" />
+        <LinkedCampaignPreview title="entity-linked campaigns" campaigns={campaigns.filter((c) => c.entities.length > 0)} />
+      </div>
+    );
+  }
+
+  if (activeNav === "phone") {
+    return (
+      <div className="console-tab-panel">
+        <TopList title="phone numbers" code="TEL" items={stats?.topPhoneNumbers ?? []} onPick={(v) => onPick("phone", v)} filter={filter} type="phone" />
+        <LinkedCampaignPreview title="phone-linked campaigns" campaigns={campaigns.filter((c) => c.phoneNumbers.length > 0)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="console-tab-panel evidence-tab">
+      <button
+        type="button"
+        className="evidence-wide-export"
+        disabled={!canExport}
+        onClick={() => void downloadJson("/api/evidence", `pramaansetu-intelligence-${Date.now()}.json`)}
+      >
+        <span>{canExport ? "EXPORT FULL INTELLIGENCE SNAPSHOT" : "REGULATOR MODE REQUIRED"}</span>
+        <strong>JSON</strong>
+        <b>↗</b>
+      </button>
+      <div className="console-grid">
+        <VerdictList items={stats?.verdictBreakdown ?? {}} />
+        <DetectionPanel detection={stats?.detection} />
+      </div>
+      <LinkedCampaignPreview title="campaign evidence packs" campaigns={campaigns} evidence canExport={canExport} />
+    </div>
+  );
+}
+
+function LinkedCampaignPreview({ title, campaigns, evidence, canExport = true }: { title: string; campaigns: Campaign[]; evidence?: boolean; canExport?: boolean }) {
+  return (
+    <div className="toplist-panel linked-preview">
+      <div className="panel-header"><strong>{title}</strong><span>{campaigns.length.toString().padStart(2, "0")}</span></div>
+      {campaigns.length === 0 ? (
+        <div className="empty-state">No matching campaign records yet</div>
+      ) : campaigns.slice(0, 5).map((campaign, i) => (
+        <div className="toplist-row static preview-row" key={campaign.id}>
+          <span>{(i + 1).toString().padStart(2, "0")}</span>
+          <strong>{campaign.entities.join(" / ") || `Campaign ${campaign.id}`}</strong>
+          {evidence ? (
+            <button type="button" disabled={!canExport} onClick={() => void downloadJson(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}>
+              {canExport ? "export ↗" : "locked"}
+            </button>
+          ) : (
+            <b>{campaign.eventCount}</b>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RadarStat({ label, value, sub, tone }: { label: string; value?: number; sub: string; tone?: string }) {
   return (
     <div className={`radar-stat ${tone ?? ""}`}>
@@ -249,7 +399,7 @@ function RadarStat({ label, value, sub, tone }: { label: string; value?: number;
   );
 }
 
-function CampaignCard({ campaign, index, onIndicator, filter }: { campaign: Campaign; index: number; onIndicator: (t: FilterType, v: string) => void; filter: Filter | null }) {
+function CampaignCard({ campaign, index, onIndicator, filter, canExport = true }: { campaign: Campaign; index: number; onIndicator: (t: FilterType, v: string) => void; filter: Filter | null; canExport?: boolean }) {
   const entity = campaign.entities.join(" / ") || "Unattributed campaign";
   return (
     <article className={`campaign-card ${campaign.severity}`}>
@@ -278,11 +428,16 @@ function CampaignCard({ campaign, index, onIndicator, filter }: { campaign: Camp
           <IndicatorLine label="LINKED BY" values={campaign.linkingIndicators} />
         </div>
       </div>
-      <a className="campaign-export" href={apiUrl(`/api/evidence/${campaign.id}`)} target="_blank" rel="noreferrer">
+      <button
+        type="button"
+        className="campaign-export"
+        disabled={!canExport}
+        onClick={() => void downloadJson(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}
+      >
         <span>JSON</span>
-        export<br />evidence
+        {canExport ? <>export<br />evidence</> : <>regulator<br />only</>}
         <b>↗</b>
-      </a>
+      </button>
     </article>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
+import { RoleSurfaceNotice } from "@/components/role";
 
 interface RiskSignal { label: string; detail: string }
 interface Risk {
@@ -87,9 +88,32 @@ const SAMPLES: { id: string; key: string; mime: string; name: string; label: str
   { id: "gv", key: "original_mp4_expect_original", mime: "video/mp4", name: "genuine-video.mp4", label: "genuine video", tone: "verified" },
   { id: "cv", key: "voiceclone_mp4_expect_altered", mime: "video/mp4", name: "voiceclone-video.mp4", label: "voice-cloned video", tone: "danger" },
   { id: "ga", key: "compressed_m4a_expect_derivative", mime: "audio/mp4", name: "voice-note.m4a", label: "forwarded voice note", tone: "verified" },
-  { id: "sy", key: "synthetic_png_expect_synthetic", mime: "image/png", name: "flat-render.png", label: "flat render · detection", tone: "caution" },
-  { id: "au", key: "authentic_png_expect_authentic", mime: "image/png", name: "camera-like.png", label: "camera-like · detection", tone: "verified" },
 ];
+
+// Client-side upload guard (server also enforces a 30 MB JSON limit).
+const MAX_UPLOAD_MB = 25;
+const ACCEPTED_PREFIXES = ["image/", "video/", "audio/"];
+const ACCEPTED_EXACT = ["application/pdf"];
+
+function fileTypeSupported(file: File): boolean {
+  if (ACCEPTED_EXACT.includes(file.type)) return true;
+  return ACCEPTED_PREFIXES.some((p) => file.type.startsWith(p));
+}
+
+// Some error responses (413 Payload Too Large, 415, proxy pages) are not JSON.
+// Parse defensively so the UI never crashes on `response.json()`.
+async function readResponse(response: Response): Promise<{ ok: boolean; data: Record<string, unknown> }> {
+  const ct = response.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    return { ok: response.ok, data: (await response.json()) as Record<string, unknown> };
+  }
+  await response.text().catch(() => "");
+  const error =
+    response.status === 413
+      ? "That file is too large to verify here (server limit ~30 MB). Try a smaller file."
+      : `Verification service returned an unexpected response (HTTP ${response.status}).`;
+  return { ok: false, data: { error } };
+}
 
 function base64ToFile(b64: string, mime: string, name: string): File {
   const bin = atob(b64);
@@ -107,11 +131,27 @@ export default function VerifyPage() {
   const [sampleBusy, setSampleBusy] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const demoCache = useRef<Record<string, string> | null>(null);
 
   useEffect(() => () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
+
+  // Validate size/type, then accept the file. Shared by the input and drag-drop.
+  function pickFile(f: File | null) {
+    setError(null);
+    if (!f) { setFile(null); return; }
+    if (!fileTypeSupported(f)) {
+      setError(`Unsupported file type${f.type ? ` (${f.type})` : ""}. Use an image, video, audio file, or PDF.`);
+      return;
+    }
+    if (f.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB. Try a smaller file.`);
+      return;
+    }
+    setFile(f);
+  }
 
   async function getDemo(): Promise<Record<string, string>> {
     if (!demoCache.current) {
@@ -140,9 +180,9 @@ export default function VerifyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: b64, mimeType: s.mime }),
       });
-      const data = await response.json();
-      if (!response.ok) setError(data.error || "Verification failed");
-      else setResult(data);
+      const { ok, data } = await readResponse(response);
+      if (!ok) setError((data.error as string) || "Verification failed");
+      else setResult(data as unknown as VerifyResult);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -150,12 +190,60 @@ export default function VerifyPage() {
     }
   }
 
-  // Shareable demo links: /verify?auto=gv auto-runs a sample on load.
+  // Verify content handed off from the signing rail ("verify a copy"), or a
+  // shareable demo link (/verify?auto=gv) that auto-runs a sample on load.
+  async function runHandoff(h: { kind: "text" | "file"; text?: string; content?: string; mimeType?: string; name?: string }) {
+    setError(null);
+    setResult(null);
+    setLoading(true);
+    try {
+      const body: Record<string, unknown> =
+        h.kind === "text"
+          ? { text: h.text ?? "", mimeType: "text/plain" }
+          : { content: h.content ?? "", mimeType: h.mimeType ?? "application/octet-stream" };
+      if (h.kind === "text") { setMode("text"); setText(h.text ?? ""); }
+      else if (h.content) {
+        setMode("file");
+        const f = base64ToFile(h.content, h.mimeType ?? "application/octet-stream", h.name ?? "signed-content");
+        setFile(f);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl((h.mimeType ?? "").startsWith("image/") ? URL.createObjectURL(f) : null);
+      }
+      const response = await fetch(apiUrl("/api/verify"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const { ok, data } = await readResponse(response);
+      if (!ok) setError((data.error as string) || "Verification failed");
+      else setResult(data as unknown as VerifyResult);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Verify content handed off from the signing rail ("verify a copy"), or a
+  // shareable demo link (/verify?auto=gv) that auto-runs a sample on load.
+  // Deferred via setTimeout(0) so it syncs from external state, not synchronously.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("auto");
-    const s = id ? SAMPLES.find((x) => x.id === id) : undefined;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (s) void runSample(s);
+    const timer = window.setTimeout(() => {
+      const raw = window.sessionStorage.getItem("pramaan-verify-handoff");
+      if (raw) {
+        window.sessionStorage.removeItem("pramaan-verify-handoff");
+        try {
+          void runHandoff(JSON.parse(raw));
+          return;
+        } catch {
+          /* fall through to auto-sample */
+        }
+      }
+      const id = new URLSearchParams(window.location.search).get("auto");
+      const s = id ? SAMPLES.find((x) => x.id === id) : undefined;
+      if (s) void runSample(s);
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -185,9 +273,9 @@ export default function VerifyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await response.json();
-      if (!response.ok) setError(data.error || data.detail || "Verification request failed");
-      else setResult(data);
+      const { ok, data } = await readResponse(response);
+      if (!ok) setError((data.error as string) || (data.detail as string) || "Verification request failed");
+      else setResult(data as unknown as VerifyResult);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -220,6 +308,10 @@ export default function VerifyPage() {
         </div>
       </section>
 
+      <RoleSurfaceNotice surface="investor" title="Investor verifier surface" soft>
+        This is the investor-facing flow. Issuers and regulators can test it, but live verification is designed for people checking forwarded content before acting.
+      </RoleSurfaceNotice>
+
       <section className="verifier-workspace">
         <div className="verify-form-column">
           <div className="workspace-heading">
@@ -247,15 +339,24 @@ export default function VerifyPage() {
                 </button>
               </>
             ) : (
-              <label className="upload-zone">
+              <label
+                className={`upload-zone ${dragActive ? "drag-active" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragActive(false);
+                  pickFile(e.dataTransfer.files?.[0] ?? null);
+                }}
+              >
                 <input
                   type="file"
                   accept="image/*,video/*,audio/*,application/pdf"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
                 />
                 <span className="upload-glyph">⌁</span>
-                <strong>{file ? file.name : "drop or select suspicious content"}</strong>
-                <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : "PNG · JPG · WEBP · MP4 · PDF"}</span>
+                <strong>{file ? file.name : dragActive ? "release to load file" : "drop or select suspicious content"}</strong>
+                <span>{file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : `image · video · audio · PDF · max ${MAX_UPLOAD_MB} MB`}</span>
               </label>
             )}
           </div>

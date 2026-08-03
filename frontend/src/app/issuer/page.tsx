@@ -1,8 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiUrl } from "@/lib/api";
+import { RoleSurfaceNotice, useRole } from "@/components/role";
+
+type Handoff =
+  | { kind: "text"; text: string }
+  | { kind: "file"; content: string; mimeType: string; name: string };
 
 interface Issuer {
   id: string;
@@ -37,6 +42,8 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 export default function IssuerPage() {
+  const { role } = useRole();
+  const router = useRouter();
   const [issuers, setIssuers] = useState<Issuer[]>([]);
   const [issuerId, setIssuerId] = useState("");
   const [issuerKey, setIssuerKey] = useState("");
@@ -46,8 +53,18 @@ export default function IssuerPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SignResult | null>(null);
+  const [signedPayload, setSignedPayload] = useState<Handoff | null>(null);
   const [revoked, setRevoked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Carry the just-signed content to the verifier so "verify a copy" actually
+  // re-verifies it instead of opening an empty form.
+  function verifyCopy() {
+    if (signedPayload) {
+      window.sessionStorage.setItem("pramaan-verify-handoff", JSON.stringify(signedPayload));
+    }
+    router.push("/verify");
+  }
 
   async function revoke() {
     if (!result) return;
@@ -64,6 +81,7 @@ export default function IssuerPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Revocation failed");
       setRevoked(true);
+      setIssuerKey("");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -109,12 +127,17 @@ export default function IssuerPage() {
     setRevoked(false);
     try {
       const body: Record<string, unknown> = { issuerId, title };
+      let handoff: Handoff | null = null;
       if (mode === "text") {
         body.text = text;
         body.mimeType = "text/plain";
+        handoff = { kind: "text", text };
       } else if (file) {
-        body.content = await fileToBase64(file);
-        body.mimeType = file.type || "application/octet-stream";
+        const content = await fileToBase64(file);
+        const mimeType = file.type || "application/octet-stream";
+        body.content = content;
+        body.mimeType = mimeType;
+        handoff = { kind: "file", content, mimeType, name: file.name };
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (issuerKey.trim()) headers["x-issuer-key"] = issuerKey.trim();
@@ -127,6 +150,8 @@ export default function IssuerPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Signing failed");
       setResult(data);
+      setSignedPayload(handoff);
+      setIssuerKey(""); // don't retain the signing key in memory after use
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -135,6 +160,7 @@ export default function IssuerPage() {
   }
 
   const selected = issuers.find((issuer) => issuer.id === issuerId);
+  const canOperate = role === "issuer";
 
   return (
     <main className="page issuer-page">
@@ -156,6 +182,10 @@ export default function IssuerPage() {
         </div>
       </section>
 
+      <RoleSurfaceNotice surface="issuer" title="Issuer controls are protected">
+        Signing, registry seeding, and revocation are issuer operations. Switch to Issuer mode to create or withdraw official provenance records.
+      </RoleSurfaceNotice>
+
       <section className="signing-workspace">
         <aside className="signing-steps">
           <div className="panel-header">
@@ -167,12 +197,16 @@ export default function IssuerPage() {
             ["02", "Attach content", "Supply the exact text, document, image, or video."],
             ["03", "Create binding", "Hash content and generate perceptual fingerprints."],
             ["04", "Publish proof", "Sign the manifest and append the registry record."],
-          ].map(([n, title, copy], index) => (
-            <div className={`signing-step ${index < 2 ? "active" : ""}`} key={n}>
-              <span>{n}</span>
-              <div><strong>{title}</strong><p>{copy}</p></div>
-            </div>
-          ))}
+          ].map(([n, title, copy], index) => {
+            // Reflect real progress: content ready (2) -> signing (3) -> done (4).
+            const phase = result ? 4 : busy ? 3 : (mode === "text" ? text.trim() : file) ? 2 : 1;
+            return (
+              <div className={`signing-step ${index < phase ? "active" : ""} ${index < phase - 1 || result ? "done" : ""}`} key={n}>
+                <span>{n}</span>
+                <div><strong>{title}</strong><p>{copy}</p></div>
+              </div>
+            );
+          })}
           <div className="prototype-notice">
             <span className="tag orange">PROTOTYPE CONTROL</span>
             <p>Production issuers should authenticate with issuer-bound credentials and HSM-held keys.</p>
@@ -185,7 +219,9 @@ export default function IssuerPage() {
               <span className="micro-label">NEW PROVENANCE RECORD</span>
               <h2>sign communication</h2>
             </div>
-            <span className="record-status"><i /> DRAFT</span>
+            <span className={`record-status ${result ? "committed" : busy ? "signing" : ""}`}>
+              <i /> {result ? (revoked ? "REVOKED" : "COMMITTED") : busy ? "SIGNING…" : "DRAFT"}
+            </span>
           </div>
 
           {issuers.length === 0 ? (
@@ -193,8 +229,8 @@ export default function IssuerPage() {
               <div className="seed-glyph">＋</div>
               <h3>No issuer registry loaded</h3>
               <p>Load the isolated SEBI, NSE, and listed-company demo identities.</p>
-              <button className="button primary" onClick={seed} disabled={busy}>
-                {busy ? "initialising…" : "initialise demo registry"} →
+              <button className="button primary" onClick={seed} disabled={!canOperate || busy}>
+                {busy ? "initialising…" : canOperate ? "initialise demo registry" : "switch to issuer to initialise"} →
               </button>
             </div>
           ) : (
@@ -281,9 +317,9 @@ export default function IssuerPage() {
                 <button
                   className="button primary"
                   onClick={sign}
-                  disabled={busy || !issuerId || !title.trim() || (mode === "text" ? !text.trim() : !file)}
+                  disabled={!canOperate || busy || !issuerId || !title.trim() || (mode === "text" ? !text.trim() : !file)}
                 >
-                  {busy ? "creating proof…" : "sign & register"} →
+                  {busy ? "creating proof…" : canOperate ? "sign & register" : "issuer mode required"} →
                 </button>
               </div>
             </div>
@@ -298,7 +334,7 @@ export default function IssuerPage() {
           <span>{result ? "COMMITTED" : "NO RECORD YET"}</span>
         </div>
         {result ? (
-          <SigningReceipt result={result} selected={selected} revoked={revoked} onRevoke={revoke} busy={busy} />
+          <SigningReceipt result={result} selected={selected} revoked={revoked} onRevoke={revoke} onVerifyCopy={verifyCopy} busy={busy} canOperate={canOperate} />
         ) : (
           <div className="receipt-empty">
             <span>manifest://awaiting-content</span>
@@ -310,7 +346,7 @@ export default function IssuerPage() {
   );
 }
 
-function SigningReceipt({ result, selected, revoked, onRevoke, busy }: { result: SignResult; selected?: Issuer; revoked: boolean; onRevoke: () => void; busy: boolean }) {
+function SigningReceipt({ result, selected, revoked, onRevoke, onVerifyCopy, busy, canOperate }: { result: SignResult; selected?: Issuer; revoked: boolean; onRevoke: () => void; onVerifyCopy: () => void; busy: boolean; canOperate: boolean }) {
   return (
     <div className={`signing-receipt ${revoked ? "is-revoked" : ""}`}>
       <div className="receipt-success">
@@ -325,17 +361,17 @@ function SigningReceipt({ result, selected, revoked, onRevoke, busy }: { result:
           </p>
         </div>
         <div className="receipt-actions">
-          <Link href="/verify" className="button">verify a copy →</Link>
+          <button type="button" className="button" onClick={onVerifyCopy}>verify a copy →</button>
           {!revoked && (
-            <button type="button" className="button danger" onClick={onRevoke} disabled={busy}>
-              {busy ? "revoking…" : "revoke record"}
+            <button type="button" className="button danger" onClick={onRevoke} disabled={!canOperate || busy}>
+              {busy ? "revoking…" : canOperate ? "revoke record" : "issuer mode required"}
             </button>
           )}
         </div>
       </div>
       <dl>
         <ReceiptRow label="asset id" value={result.assetId} />
-        <ReceiptRow label="issuer" value={selected?.name ?? result.manifest.issuer?.name ?? "—"} />
+        <ReceiptRow label="issuer" value={result.manifest.issuer?.name ?? selected?.name ?? "—"} />
         <ReceiptRow label="media type" value={result.mediaType.toUpperCase()} />
         <ReceiptRow label="content hash" value={result.contentHash} />
         <ReceiptRow label="ed25519 signature" value={result.signature} />

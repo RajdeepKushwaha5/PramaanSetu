@@ -163,6 +163,10 @@ a {
   color: var(--ink);
 }
 
+.primary-nav a.role-primary {
+  color: var(--blue);
+}
+
 .primary-nav a.active::after {
   position: absolute;
   right: 0;
@@ -238,6 +242,56 @@ a {
 
 .context-copy {
   color: var(--faint);
+}
+
+.role-surface-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px var(--section-pad-x, 40px);
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-soft) 48%, transparent), transparent),
+    var(--surface);
+}
+
+.role-surface-notice.blocked {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--orange-soft) 58%, transparent), transparent),
+    var(--surface);
+}
+
+.role-surface-notice strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.role-surface-notice p {
+  max-width: 76ch;
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.role-surface-notice button {
+  flex: none;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--blue);
+  color: var(--blue);
+  background: transparent;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.role-surface-notice button:hover {
+  background: var(--blue-soft);
 }
 
 .page {
@@ -398,6 +452,16 @@ a {
 .button:disabled {
   cursor: not-allowed;
   opacity: 0.35;
+}
+
+.intelligence-export:disabled,
+.evidence-wide-export:disabled,
+.campaign-export:disabled,
+.linked-preview .preview-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+  transform: none;
 }
 
 .button-arrow {
@@ -1093,6 +1157,13 @@ textarea.form-control {
 
 .layer-card:hover {
   background: var(--surface-2);
+}
+
+.layer-card.role-featured {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--blue-soft) 42%, transparent), transparent),
+    var(--surface);
+  box-shadow: inset 0 3px 0 var(--blue);
 }
 
 .layer-card-top {
@@ -1999,6 +2070,49 @@ textarea.form-control {
   text-transform: uppercase;
 }
 
+.intelligence-export {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px 0 18px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, var(--ink) 4%), var(--surface));
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.intelligence-export b {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  border-left: 1px solid var(--line);
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 800;
+  place-items: center;
+}
+
+.intelligence-export:hover {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--blue) 14%, transparent);
+  transform: translateY(-1px);
+}
+
 .live-mark {
   display: flex;
   align-items: center;
@@ -2145,6 +2259,89 @@ textarea.form-control {
 
 .campaign-workspace {
   min-width: 0;
+}
+
+.console-tab-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.console-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.console-back {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  color: var(--blue);
+  background: transparent;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.console-back:hover {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.linked-preview .preview-row {
+  grid-template-columns: 54px 1fr auto;
+}
+
+.linked-preview .preview-row button {
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.evidence-wide-export {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  width: 100%;
+  min-height: 74px;
+  align-items: center;
+  gap: 18px;
+  padding: 0 22px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-soft) 52%, transparent), transparent),
+    var(--surface-2);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  text-align: left;
+  cursor: pointer;
+}
+
+.evidence-wide-export span {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.evidence-wide-export strong {
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.evidence-wide-export b {
+  color: var(--blue);
+}
+
+.evidence-wide-export:hover {
+  border-color: var(--blue);
 }
 
 .campaign-toolbar {
@@ -2345,11 +2542,16 @@ textarea.form-control {
   flex-direction: column;
   gap: 13px;
   border-left: 1px solid var(--line);
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
   color: var(--muted);
+  background: transparent;
   font-size: 10px;
   line-height: 1.5;
   text-align: center;
   text-transform: uppercase;
+  cursor: pointer;
 }
 
 .campaign-export:hover {
@@ -2571,6 +2773,10 @@ textarea.form-control {
 
   .radar-statusbar > div {
     flex-wrap: wrap;
+  }
+
+  .intelligence-export {
+    width: fit-content;
   }
 
   .stat-console {
@@ -3764,6 +3970,756 @@ button.toplist-row.active {
 .detect-good {
   color: var(--green);
 }
+
+/* --------------------------------------------------------------------------
+   2026 visual refinement
+   Inspired by iii.dev's framed grid, oversized editorial type, restrained
+   mono labels, and live-system motion. This layer intentionally overrides
+   earlier component rules instead of rewriting the whole app.
+-------------------------------------------------------------------------- */
+
+:root,
+:root[data-theme="dark"] {
+  --glow-blue: color-mix(in srgb, var(--blue) 28%, transparent);
+  --glow-orange: color-mix(in srgb, var(--orange) 28%, transparent);
+  --section-pad-x: clamp(28px, 4.2vw, 72px);
+  --section-pad-y: clamp(60px, 7vw, 118px);
+}
+
+html {
+  text-rendering: geometricPrecision;
+}
+
+body {
+  font-size: 16px;
+  line-height: 1.58;
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--blue) 8%, transparent), transparent 28rem),
+    radial-gradient(circle at 86% 22%, color-mix(in srgb, var(--orange) 8%, transparent), transparent 25rem),
+    linear-gradient(90deg, transparent calc(50% - 1px), color-mix(in srgb, var(--line) 36%, transparent) 50%, transparent calc(50% + 1px)),
+    repeating-linear-gradient(90deg, transparent 0 95px, color-mix(in srgb, var(--line) 16%, transparent) 96px),
+    var(--bg);
+}
+
+.site-frame {
+  width: min(1680px, calc(100% - 48px));
+  margin: 30px auto;
+  border-color: color-mix(in srgb, var(--line-strong) 58%, var(--line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--bg) 60%, transparent),
+    0 28px 90px color-mix(in srgb, black 35%, transparent);
+}
+
+.site-header {
+  min-height: 100px;
+  padding-inline: clamp(24px, 3.5vw, 54px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--surface) 88%, transparent)),
+    var(--surface);
+}
+
+.brand {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-size: clamp(18px, 1.4vw, 22px);
+  letter-spacing: -0.055em;
+}
+
+.logo-mark {
+  grid-template-columns: repeat(3, 8px);
+  gap: 4px;
+  width: 32px;
+}
+
+.logo-mark i {
+  width: 8px;
+  height: 8px;
+}
+
+.primary-nav {
+  gap: clamp(26px, 4vw, 58px);
+  font-size: 16px;
+}
+
+.primary-nav a {
+  padding-block: 39px;
+}
+
+.system-pill,
+.context-bar,
+.panel-header,
+.micro-label,
+.eyebrow,
+.tag {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.system-pill {
+  min-height: 50px;
+  padding-inline: 18px;
+  font-size: 13px;
+}
+
+.icon-button {
+  width: 50px;
+  height: 50px;
+  font-size: 22px;
+}
+
+.context-bar {
+  min-height: 62px;
+  padding-inline: clamp(24px, 3.5vw, 54px);
+  font-size: 13px;
+}
+
+.page-intro {
+  min-height: 270px;
+  grid-template-columns: minmax(250px, 0.55fr) minmax(0, 1.45fr);
+}
+
+.page-intro-index,
+.page-intro-copy,
+.verify-form-column,
+.layers-section,
+.system-principles,
+.statement-strip {
+  padding-inline: var(--section-pad-x);
+}
+
+.page-intro-index,
+.page-intro-copy {
+  padding-block: clamp(44px, 5vw, 72px);
+}
+
+.page-intro-index strong {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-size: clamp(50px, 4.7vw, 72px);
+  letter-spacing: -0.08em;
+}
+
+.page-intro-index div,
+.micro-label,
+.field > span,
+.result-region-heading,
+.workspace-heading {
+  font-size: 13px;
+}
+
+.eyebrow {
+  margin-bottom: 22px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+}
+
+.page-title,
+.hero-copy h1,
+.section-heading h2,
+.principle-intro h2,
+.statement-copy h2 {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-weight: 700;
+}
+
+.page-title {
+  max-width: 1020px;
+  font-size: clamp(42px, 5.6vw, 86px);
+  letter-spacing: -0.08em;
+  line-height: 0.92;
+}
+
+.page-lede {
+  max-width: 820px;
+  font-size: clamp(16px, 1.1vw, 19px);
+  line-height: 1.7;
+}
+
+.button {
+  min-height: 52px;
+  padding-inline: 20px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+}
+
+.button.primary {
+  border-color: color-mix(in srgb, var(--blue) 82%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 24%, transparent);
+}
+
+.tabs button {
+  min-height: 40px;
+  padding-inline: 15px;
+  font-size: 14px;
+}
+
+.form-control {
+  font-size: 16px;
+}
+
+input.form-control,
+select.form-control {
+  height: 50px;
+}
+
+textarea.form-control {
+  min-height: 190px;
+  font-size: 16px;
+}
+
+.panel {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 98%, white 2%), var(--surface));
+}
+
+.panel-header {
+  min-height: 62px;
+  padding-inline: 22px;
+  font-size: 13px;
+}
+
+.home-hero {
+  min-height: 700px;
+  grid-template-columns: minmax(0, 0.98fr) minmax(520px, 1.02fr);
+}
+
+.hero-copy {
+  padding: clamp(58px, 6vw, 92px) var(--section-pad-x);
+  background:
+    radial-gradient(circle at 20% 24%, color-mix(in srgb, var(--blue) 11%, transparent), transparent 23rem),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg) 14%, transparent));
+}
+
+.hero-copy h1 {
+  max-width: 860px;
+  font-size: clamp(50px, 6.2vw, 100px);
+  letter-spacing: -0.09em;
+  line-height: 0.9;
+}
+
+.hero-copy h1 span,
+.page-title .muted,
+.section-heading h2 span,
+.principle-intro h2 span {
+  color: color-mix(in srgb, var(--muted) 82%, var(--ink));
+}
+
+.hero-lede {
+  max-width: 760px;
+  font-size: clamp(16px, 1.1vw, 19px);
+  line-height: 1.72;
+}
+
+.hero-actions {
+  margin-top: 34px;
+}
+
+.hero-actions .button {
+  min-width: 220px;
+}
+
+.hero-proofline {
+  margin-top: 34px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.hero-visual {
+  padding: clamp(44px, 4.8vw, 76px) clamp(28px, 3.6vw, 58px);
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), color-mix(in srgb, var(--line) 45%, transparent) 50%, transparent calc(50% + 1px)),
+    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--blue) 12%, transparent), transparent 22rem);
+}
+
+.architecture-panel {
+  max-width: 760px;
+  box-shadow: 0 26px 80px color-mix(in srgb, black 28%, transparent);
+}
+
+.trust-topology {
+  padding: 30px 34px 8px;
+  filter: drop-shadow(0 22px 40px color-mix(in srgb, black 20%, transparent));
+}
+
+.topology-lines path {
+  stroke-width: 1.45;
+  opacity: 0.8;
+}
+
+.topology-lines path.is-live {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 10px currentColor);
+}
+
+.core-label {
+  font-size: 13px;
+}
+
+.core-sub {
+  font-size: 11px;
+}
+
+.topology-node {
+  stroke-width: 2.2;
+}
+
+.topology-node.is-active,
+.topology-node.is-alert {
+  stroke-width: 3.4;
+}
+
+.topology-label {
+  fill: color-mix(in srgb, var(--ink) 78%, var(--muted));
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.topology-node-state {
+  font-size: 10.5px;
+}
+
+.topology-token circle {
+  stroke-width: 1.8;
+  filter: drop-shadow(0 0 14px currentColor);
+}
+
+.topology-story {
+  padding: 18px 22px 20px;
+}
+
+.topology-story-line {
+  min-height: 64px;
+}
+
+.topology-story-line p {
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.topology-chip {
+  padding: 6px 11px;
+  font-size: 12px;
+}
+
+.topology-buttons button {
+  width: 38px;
+  height: 38px;
+  border-radius: 0;
+  font-size: 15px;
+}
+
+.topology-tick {
+  width: 30px;
+  height: 7px;
+  border-radius: 0;
+}
+
+.topology-tick.active {
+  width: 44px;
+}
+
+.architecture-legend {
+  padding: 18px 22px;
+  font-size: 12px;
+}
+
+.architecture-foot div {
+  padding: 22px;
+}
+
+.architecture-foot span {
+  font-size: 12px;
+}
+
+.architecture-foot strong {
+  font-size: 17px;
+}
+
+.statement-strip,
+.layers-section,
+.system-principles {
+  padding-block: var(--section-pad-y);
+}
+
+.statement-copy h2,
+.section-heading h2,
+.principle-intro h2 {
+  font-size: clamp(36px, 4.3vw, 66px);
+  letter-spacing: -0.075em;
+  line-height: 1;
+}
+
+.defence-flow > div {
+  min-height: 210px;
+  padding: clamp(24px, 3vw, 44px);
+}
+
+.defence-flow strong {
+  font-size: clamp(18px, 1.6vw, 24px);
+}
+
+.defence-flow p,
+.section-heading > p,
+.layer-card p,
+.principle-table p {
+  font-size: 15px;
+}
+
+.section-heading {
+  margin-bottom: 58px;
+}
+
+.layer-card {
+  min-height: 330px;
+  padding: clamp(28px, 3vw, 46px);
+}
+
+.layer-card h3 {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-size: clamp(24px, 1.9vw, 32px);
+  letter-spacing: -0.07em;
+}
+
+.layer-card-top,
+.layer-action {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.09em;
+}
+
+.principle-table > div {
+  min-height: 240px;
+  padding: clamp(28px, 3vw, 44px);
+}
+
+.principle-table h3 {
+  margin-top: 52px;
+  font-size: clamp(17px, 1.35vw, 22px);
+  letter-spacing: -0.045em;
+}
+
+.verifier-workspace {
+  grid-template-columns: minmax(0, 1.28fr) minmax(360px, 0.72fr);
+}
+
+.verify-form-column {
+  padding-block: clamp(42px, 4.4vw, 76px);
+}
+
+.workspace-heading {
+  padding-bottom: 32px;
+}
+
+.intake-zone {
+  min-height: 320px;
+  padding: clamp(28px, 3vw, 46px);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-2) 92%, var(--blue) 8%), var(--surface-2));
+}
+
+.intake-textarea {
+  min-height: 210px !important;
+  font-size: 16px !important;
+  line-height: 1.75;
+}
+
+.sample-link {
+  font-size: 12px;
+}
+
+.upload-zone {
+  min-height: 250px;
+  font-size: 15px;
+}
+
+.upload-zone strong {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-size: clamp(19px, 1.6vw, 25px);
+  letter-spacing: -0.05em;
+}
+
+.intake-actions {
+  margin-top: 30px;
+}
+
+.verify-button {
+  min-width: 260px;
+}
+
+.verify-guide .pipeline-step,
+.pipeline-step {
+  min-height: 132px;
+}
+
+.pipeline-step strong {
+  font-size: 16px;
+}
+
+.pipeline-step p {
+  font-size: 14px;
+}
+
+.result-region {
+  padding: clamp(44px, 5vw, 82px) var(--section-pad-x);
+}
+
+.result-placeholder {
+  min-height: 430px;
+}
+
+.verdict-banner h2 {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+  font-size: clamp(28px, 2.7vw, 44px);
+  letter-spacing: -0.08em;
+}
+
+.verdict-message {
+  font-size: clamp(16px, 1.1vw, 19px);
+  line-height: 1.65;
+}
+
+.evidence-list,
+.risk-summary,
+.tamper-notes li,
+.synth-verdict p,
+.synth-col li,
+.chain-step p,
+.demo-sample,
+.channel-note {
+  font-size: 15px;
+}
+
+.synth-score,
+.risk-dial strong,
+.radar-stat strong,
+.campaign-score strong {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+}
+
+.synth-score {
+  font-size: 42px;
+}
+
+.synth-verdict strong {
+  font-size: 16px;
+}
+
+.synth-sources span {
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.demo-sample {
+  min-height: 42px;
+  border-radius: 0;
+  padding-inline: 14px;
+}
+
+.radar-statusbar,
+.radar-console {
+  font-size: 16px;
+}
+
+.radar-stat {
+  min-height: 180px;
+}
+
+.radar-stat strong {
+  font-size: clamp(38px, 3.5vw, 60px);
+}
+
+.radar-stat p,
+.radar-nav-item,
+.toplist-row,
+.campaign-detail,
+.timeline-item {
+  font-size: 15px;
+}
+
+.issuer-identity-card strong,
+.signing-receipt h3,
+.receipt-success strong {
+  font-family: var(--font-display), var(--font-geist-sans), sans-serif;
+}
+
+.issuer-identity-card strong {
+  font-size: 24px;
+}
+
+.signing-receipt {
+  font-size: 16px;
+}
+
+.site-footer {
+  min-height: 190px;
+  padding-inline: var(--section-pad-x);
+  font-size: 16px;
+}
+
+.footer-meta {
+  font-size: 14px;
+}
+
+@keyframes live-wire {
+  0% { stroke-dashoffset: 0; opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: -42; opacity: 0.6; }
+}
+
+@keyframes float-panel {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.architecture-panel,
+.result-console,
+.radar-console {
+  animation: float-panel 7s ease-in-out infinite;
+}
+
+.topology-lines path.is-live {
+  animation: live-wire 850ms linear infinite;
+}
+
+@media (max-width: 1180px) {
+  .site-header {
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+  }
+
+  .primary-nav {
+    order: 3;
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    overflow-x: auto;
+    border-top: 1px solid var(--line);
+  }
+
+  .primary-nav a {
+    padding-block: 18px;
+    white-space: nowrap;
+  }
+
+  .home-hero,
+  .page-intro,
+  .system-principles,
+  .verifier-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy,
+  .page-intro-index,
+  .verify-form-column {
+    border-right: 0;
+  }
+
+  .hero-copy,
+  .page-intro-index {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-visual {
+    min-height: 680px;
+  }
+
+  .section-heading {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 820px) {
+  body {
+    font-size: 16px;
+  }
+
+  .site-frame {
+    width: 100%;
+    margin: 0;
+    border-right: 0;
+    border-left: 0;
+  }
+
+  .site-header,
+  .context-bar {
+    padding-inline: 18px;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+  }
+
+  .system-pill {
+    display: none;
+  }
+
+  .context-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-height: 86px;
+  }
+
+  .page-title,
+  .hero-copy h1 {
+    font-size: clamp(38px, 12vw, 66px);
+  }
+
+  .statement-copy h2,
+  .section-heading h2,
+  .principle-intro h2 {
+    font-size: clamp(32px, 10vw, 54px);
+  }
+
+  .hero-actions,
+  .intake-actions,
+  .workspace-heading,
+  .topology-controls,
+  .synth-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .hero-actions .button,
+  .verify-button {
+    width: 100%;
+  }
+
+  .layer-grid,
+  .principle-table,
+  .architecture-foot,
+  .chain-steps,
+  .synth-signals {
+    grid-template-columns: 1fr;
+  }
+
+  .layer-card,
+  .principle-table > div,
+  .architecture-foot div,
+  .synth-col {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .architecture-foot div:last-child,
+  .principle-table > div:last-child,
+  .synth-col:last-child {
+    border-bottom: 0;
+  }
+
+  .hero-visual {
+    min-height: auto;
+  }
+
+  .topology-story-line {
+    flex-direction: column;
+  }
+
+  .architecture-panel,
+  .result-console,
+  .radar-console {
+    animation: none;
+  }
+}
 .detect-foot {
   padding: 10px 14px;
   font-size: 10.5px;
@@ -3988,7 +4944,381 @@ button.toplist-row.active {
   .role-text i {
     display: none;
   }
+
+  .intelligence-export {
+    width: 100%;
+  }
 }
 
+/* Final readability guards for late-loaded controls. */
+.detect-foot,
+.role-menu-item,
+.role-menu-signout,
+.mock-role p,
+.mock-login-head p {
+  font-size: 14px;
+}
 
+.role-current {
+  min-height: 50px;
+  border-radius: 0;
+  padding-inline: 14px;
+}
 
+.role-text b {
+  font-size: 14px;
+}
+
+.role-text i {
+  font-size: 11px;
+}
+
+.mock-login-card,
+.mock-role,
+.mock-login-skip,
+.role-menu,
+.role-menu-item {
+  border-radius: 0;
+}
+
+/* Final iii-inspired polish: framed, technical, animated, but not oversized. */
+.site-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-frame::before,
+.site-frame::after {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 1px;
+  background: color-mix(in srgb, var(--line) 72%, transparent);
+  content: "";
+}
+
+.site-frame::before {
+  left: max(0px, calc((100vw - min(1680px, calc(100vw - 48px))) / 2));
+}
+
+.site-frame::after {
+  right: max(0px, calc((100vw - min(1680px, calc(100vw - 48px))) / 2));
+}
+
+.panel,
+.layer-card,
+.principle-table > div,
+.toplist-panel,
+.signing-form,
+.signing-steps,
+.result-console,
+.radar-console,
+.role-surface-notice {
+  position: relative;
+}
+
+.panel::before,
+.layer-card::before,
+.toplist-panel::before,
+.signing-form::before,
+.result-console::before,
+.radar-console::before {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid var(--blue);
+  border-right: 1px solid var(--blue);
+  opacity: 0.8;
+  content: "";
+  pointer-events: none;
+}
+
+.panel::after,
+.layer-card::after,
+.toplist-panel::after,
+.signing-form::after,
+.result-console::after,
+.radar-console::after {
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 7px;
+  height: 7px;
+  border-bottom: 1px solid color-mix(in srgb, var(--orange) 70%, var(--line));
+  border-left: 1px solid color-mix(in srgb, var(--orange) 70%, var(--line));
+  opacity: 0.7;
+  content: "";
+  pointer-events: none;
+}
+
+.site-header {
+  box-shadow: 0 16px 44px color-mix(in srgb, black 18%, transparent);
+}
+
+.brand .logo-mark {
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--blue) 22%, transparent));
+}
+
+.primary-nav a.role-primary::after {
+  background: linear-gradient(90deg, var(--blue), color-mix(in srgb, var(--blue) 25%, transparent));
+}
+
+.context-bar {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-soft) 18%, transparent), transparent 45%, color-mix(in srgb, var(--orange-soft) 16%, transparent)),
+    var(--surface);
+}
+
+.surface-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 660px;
+  margin-top: 30px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
+.surface-rail a {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  min-height: 74px;
+  align-content: center;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.surface-rail a:last-child {
+  border-right: 0;
+}
+
+.surface-rail a span {
+  grid-row: span 2;
+  color: var(--blue);
+  font-size: 16px;
+}
+
+.surface-rail a strong {
+  color: var(--ink);
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.surface-rail a small {
+  color: var(--faint);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.surface-rail a.active {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--blue-soft) 68%, transparent), transparent),
+    var(--surface-3);
+  box-shadow: inset 0 2px 0 var(--blue);
+}
+
+.surface-rail a:hover {
+  background: var(--surface-2);
+}
+
+.proof-stack {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+}
+
+.proof-stack div {
+  min-height: 82px;
+  padding: 15px 18px;
+  border-right: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 82%, transparent), transparent),
+    var(--surface);
+}
+
+.proof-stack div:last-child {
+  border-right: 0;
+}
+
+.proof-stack span {
+  color: var(--blue);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.proof-stack strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: -0.03em;
+}
+
+.proof-stack p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.architecture-panel {
+  overflow: hidden;
+}
+
+.architecture-panel .panel-header,
+.radar-console,
+.signing-form,
+.result-console {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--line) 14%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.trust-topology-wrap {
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--blue) 10%, transparent), transparent 18rem),
+    var(--surface);
+}
+
+.topology-story {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-soft) 34%, transparent), transparent),
+    var(--surface-2);
+}
+
+.topology-chip,
+.tag,
+.system-pill,
+.intelligence-export,
+.button,
+.tabs button {
+  border-radius: 0;
+}
+
+.button:focus-visible,
+.icon-button:focus-visible,
+.role-current:focus-visible,
+.role-menu-item:focus-visible,
+.topology-buttons button:focus-visible,
+.surface-rail a:focus-visible {
+  outline: 1px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.role-current {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--blue-soft) 32%, transparent), transparent),
+    var(--surface-2);
+}
+
+.role-menu {
+  box-shadow: 0 24px 70px color-mix(in srgb, black 45%, transparent);
+}
+
+.role-menu-item.active {
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.stat-console {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.radar-stat {
+  background:
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--blue) 8%, transparent), transparent 7rem),
+    var(--surface);
+}
+
+.radar-stat:hover,
+.layer-card:hover,
+.toplist-panel:hover {
+  border-color: color-mix(in srgb, var(--blue) 42%, var(--line));
+}
+
+.campaign-card {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--surface-2) 72%, transparent), transparent),
+    var(--surface);
+}
+
+.campaign-card.confirmed {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--red) 80%, transparent);
+}
+
+.campaign-card.suspected {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--orange) 80%, transparent);
+}
+
+@keyframes subtle-scan {
+  0% { transform: translateX(-100%); opacity: 0; }
+  20% { opacity: 0.45; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+.architecture-panel::before,
+.result-console::before,
+.radar-console::before {
+  animation: corner-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes corner-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+.panel-header {
+  overflow: hidden;
+}
+
+.panel-header::after {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--blue) 12%, transparent), transparent);
+  content: "";
+  pointer-events: none;
+  animation: subtle-scan 6s ease-in-out infinite;
+}
+
+@media (max-width: 820px) {
+  .surface-rail,
+  .proof-stack,
+  .stat-console {
+    grid-template-columns: 1fr;
+  }
+
+  .surface-rail a,
+  .proof-stack div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .surface-rail a:last-child,
+  .proof-stack div:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* ---- audit fixes: health pill states, drag-drop, signing-step done ---- */
+.system-pill.status-degraded i { background: var(--orange); box-shadow: 0 0 10px var(--orange); }
+.system-pill.status-degraded { color: var(--orange); }
+.system-pill.status-offline i { background: var(--red); box-shadow: 0 0 10px var(--red); }
+.system-pill.status-offline { color: var(--red); }
+.system-pill.status-connecting i { background: var(--faint); box-shadow: none; }
+
+.upload-zone.drag-active {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.record-status.committed { color: var(--green); }
+.record-status.committed i { background: var(--green); }
+.record-status.signing { color: var(--orange); }
+.signing-step.done span { border-color: var(--green); color: var(--green); }

@@ -131,8 +131,10 @@ export function getCampaigns(): Campaign[] {
       else suspected++;
       if (e.impersonatedEntity) entities.add(e.impersonatedEntity);
       else if (e.matchedIssuerName) entities.add(e.matchedIssuerName);
-      e.paymentHandles.forEach((h) => handles.add(h));
-      e.phoneNumbers.forEach((p) => phones.add(p));
+      e.paymentHandles.forEach((h) => handles.add(h.trim().toLowerCase()));
+      // Normalise phones to their last-10-digit canonical form so "+91987…"
+      // and "919 87…" don't appear as separate indicators.
+      e.phoneNumbers.forEach((p) => { const n = normPhone(p); if (n.length >= 7) phones.add(n); });
       e.urls.forEach((u) => { const d = domainOf(u); if (d) domains.add(d); });
       if (e.riskScore && e.riskScore > maxRisk) maxRisk = e.riskScore;
       for (const ind of indicatorsOf(e)) {
@@ -237,8 +239,10 @@ export function getDashboardStats() {
       likelyAuthentic: synthScanned - synthLikely - synthUncertain,
     },
     verdictBreakdown,
-    topPaymentHandles: topCounts(fraud.flatMap((e) => e.paymentHandles)),
-    topPhoneNumbers: topCounts(fraud.flatMap((e) => e.phoneNumbers)),
+    topPaymentHandles: topCounts(fraud.flatMap((e) => e.paymentHandles.map((h) => h.trim().toLowerCase()))),
+    topPhoneNumbers: topCounts(
+      fraud.flatMap((e) => e.phoneNumbers.map(normPhone).filter((n) => n.length >= 7)),
+    ),
     topImpersonatedEntities: topCounts(
       fraud.map((e) => e.impersonatedEntity ?? e.matchedIssuerName).filter((x): x is string => !!x),
     ),

@@ -3,18 +3,41 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { RoleSwitcher } from "@/components/role";
+import { ROLE_META, RoleSwitcher, useRole, type Role } from "@/components/role";
+import { apiUrl } from "@/lib/api";
 
-const NAV = [
-  { href: "/", label: "overview" },
-  { href: "/verify", label: "verify" },
-  { href: "/issuer", label: "signing rail" },
-  { href: "/dashboard", label: "suptech radar" },
+type Health = "connecting" | "online" | "degraded" | "offline";
+const HEALTH_LABEL: Record<Health, string> = {
+  connecting: "connecting…",
+  online: "system live",
+  degraded: "degraded",
+  offline: "backend offline",
+};
+
+const NAV: { href: string; label: string; surface: Role | "overview" }[] = [
+  { href: "/", label: "overview", surface: "overview" },
+  { href: "/verify", label: "verify", surface: "investor" },
+  { href: "/issuer", label: "signing rail", surface: "issuer" },
+  { href: "/dashboard", label: "suptech radar", surface: "regulator" },
 ];
+
+const ROLE_CONTEXT: Record<Role, string> = {
+  investor: "INVESTOR SAFETY · VERIFY BEFORE YOU TRUST",
+  issuer: "ISSUER DESK · SIGN OFFICIAL COMMUNICATIONS",
+  regulator: "SUPTECH RADAR · MARKET-WIDE FRAUD INTELLIGENCE",
+};
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { role } = useRole();
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [health, setHealth] = useState<Health>("connecting");
+  const nav = role
+    ? [
+        ...NAV.filter((item) => item.surface === role),
+        ...NAV.filter((item) => item.surface !== role),
+      ]
+    : NAV;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -30,6 +53,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }, 0);
 
     return () => window.clearTimeout(timer);
+  }, []);
+
+  // Poll real backend health so the status pill reflects reality, not a hardcoded
+  // "live". Shows connecting / online / degraded / offline.
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      try {
+        const r = await fetch(apiUrl("/api/health"), { cache: "no-store" });
+        const d = (await r.json()) as { status?: string };
+        if (!alive) return;
+        if (!r.ok || d.status === "critical") setHealth("offline");
+        else if (d.status === "degraded") setHealth("degraded");
+        else setHealth("online");
+      } catch {
+        if (alive) setHealth("offline");
+      }
+    };
+    void check();
+    const interval = window.setInterval(() => void check(), 15000);
+    return () => {
+      alive = false;
+      window.clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -84,11 +131,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
 
         <nav className="primary-nav" aria-label="Primary navigation">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={pathname === item.href ? "active" : ""}
+              className={`${pathname === item.href ? "active" : ""} ${role && item.surface === role ? "role-primary" : ""}`}
             >
               {item.label}
             </Link>
@@ -97,9 +144,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="header-actions">
           <RoleSwitcher />
-          <span className="system-pill">
+          <span className={`system-pill status-${health}`} title={`Backend: ${health}`}>
             <i />
-            system live
+            {HEALTH_LABEL[health]}
           </span>
           <button
             className="icon-button"
@@ -113,11 +160,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       <div className="context-bar">
-        <span>SEBI TECHSPRINT / PS–01</span>
+        <span>{role ? `${ROLE_META[role].label.toUpperCase()} MODE / PS–01` : "SEBI TECHSPRINT / PS–01"}</span>
         <span className="context-copy">
-          CRYPTOGRAPHIC PROVENANCE · FRAUD INTELLIGENCE · INVESTOR SAFETY
+          {role ? ROLE_CONTEXT[role] : "CRYPTOGRAPHIC PROVENANCE · FRAUD INTELLIGENCE · INVESTOR SAFETY"}
         </span>
-        <span>INDIA / 2026</span>
+        <span>{role ? ROLE_META[role].identity.toUpperCase() : "INDIA / 2026"}</span>
       </div>
 
       {children}
