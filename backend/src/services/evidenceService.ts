@@ -7,7 +7,7 @@
  */
 
 import { getStore } from "../db/store.js";
-import { getCampaigns, severityOf, normPhone, normHandle } from "./campaignService.js";
+import { getCampaigns, severityOf } from "./campaignService.js";
 import { verifyManifest, signJson } from "../crypto/signing.js";
 import { env } from "../config/env.js";
 import {
@@ -102,31 +102,13 @@ export function buildCampaignEvidence(campaignId: number) {
   const campaign = getCampaigns().find((c) => c.id === campaignId);
   if (!campaign) return null;
 
-  const domainOf = (url: string): string | null => {
-    try {
-      return new URL(url.startsWith("http") ? url : `http://${url}`).hostname.toLowerCase();
-    } catch {
-      return null;
-    }
-  };
-
+  // Select by EXPLICIT campaign membership (event ids), not by re-deriving
+  // indicators — so an indicator-less campaign still exports its events, and
+  // membership can never disagree with the clustering that formed the campaign.
+  const memberIds = new Set(campaign.eventIds);
   const relatedEvents = store
     .listEvents()
-    .filter((e) => severityOf(e) !== "low")
-    .filter((e) => {
-      const inEntity = campaign.entities.some(
-        (x) => (e.impersonatedEntity ?? e.matchedIssuerName) === x,
-      );
-      // Compare using the SAME canonical normalisation the campaign uses, so
-      // "+91 98123 45678" / "9812345678" (and casing on handles) still match.
-      const inHandle = e.paymentHandles.some((h) => campaign.paymentHandles.includes(normHandle(h)));
-      const inPhone = e.phoneNumbers.some((p) => campaign.phoneNumbers.includes(normPhone(p)));
-      const inDomain = e.urls.some((u) => {
-        const d = domainOf(u);
-        return d != null && campaign.domains.includes(d);
-      });
-      return inEntity || inHandle || inPhone || inDomain;
-    })
+    .filter((e) => memberIds.has(e.id))
     .map(serialiseEvent);
 
   return sign({

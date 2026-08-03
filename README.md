@@ -10,9 +10,10 @@ see related fraud reports as connected campaigns.
 Think of it as **Digital Public Infrastructure for content authenticity** — a
 UPI/Aadhaar-style signed-provenance rail for the securities market. SEBI and its
 regulated intermediaries sign what is official; any investor verifies it in one
-tap, on the web or inside WhatsApp/Telegram. AI only steps in to flag the fake
-when no signed proof exists. See [PITCH.md](PITCH.md) for the positioning and
-Q&A playbook.
+tap, on the web or inside a chat app (a working Telegram bot today; WhatsApp
+Business API is the same integration, planned next). AI only steps in to flag
+the fake when no signed proof exists. See [PITCH.md](PITCH.md) for the
+positioning and Q&A playbook.
 
 Built for SEBI Securities Market TechSprint 2026, Problem Statement 1:
 AI-driven detection of synthetic media and phishing.
@@ -448,7 +449,8 @@ is ignored by Git.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Capabilities, degraded status, and store counts |
-| `GET` | `/api/issuers` | Public issuer list |
+| `GET` | `/api/issuers` | Public issuer list (includes each public key + key id) |
+| `GET` | `/api/issuers/:id/key` | Public-key directory entry for independent signature verification |
 | `POST` | `/api/issuers` | Create an issuer with `x-admin-key` |
 | `POST` | `/api/sign` | Sign content with `x-issuer-key`, except approved demo issuers in demo mode |
 | `POST` | `/api/verify` | Run provenance, tamper, synthetic-detection, and fallback risk checks |

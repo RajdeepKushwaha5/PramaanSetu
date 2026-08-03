@@ -17,11 +17,12 @@ The backend has **zero** production-dependency vulnerabilities. The Telegram
 channel talks to the Bot API directly over `fetch` (no heavy client library),
 which is what keeps the production tree clean.
 
-### Frontend — 4 high advisories, all in the Next.js build toolchain
+### Frontend — a few high advisories, all in dev/build tooling
 
 ```bash
 npm --prefix frontend audit
-# 4 high severity vulnerabilities
+# typically 3-4 high severity advisories (exact count moves with the
+# Next.js / ESLint dependency tree — run the command for the current number)
 ```
 
 All four advisories are in packages **bundled transitively inside Next.js's own

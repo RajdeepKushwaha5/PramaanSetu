@@ -162,8 +162,17 @@ test("indicator-less campaigns get unique (non-colliding) ids", async () => {
       riskLevel: "critical", riskScore: 95,
     });
   }
-  const ids = getCampaigns().map((c) => c.id);
+  const camps = getCampaigns();
+  const ids = camps.map((c) => c.id);
   assert.equal(new Set(ids).size, ids.length, "every campaign id must be unique");
+
+  // Its evidence pack must still contain the event (was previously empty because
+  // membership was re-derived from indicators that an indicator-less event lacks).
+  const { buildCampaignEvidence } = await import("../src/services/evidenceService.js");
+  const indicatorless = camps.find((c) => c.eventIds.length === 1 && c.entities.length === 0 && c.paymentHandles.length === 0 && c.phoneNumbers.length === 0);
+  assert.ok(indicatorless, "expected an indicator-less campaign");
+  const pack = buildCampaignEvidence(indicatorless!.id) as { relatedSubmissions: unknown[] };
+  assert.equal(pack.relatedSubmissions.length, 1, "an indicator-less campaign's evidence must include its event");
 });
 
 test("evidence pack includes events despite phone normalization", async () => {

@@ -23,6 +23,7 @@ export interface Campaign {
   id: number;
   severity: Exclude<Severity, "low">;
   eventCount: number;
+  eventIds: string[]; // explicit membership — evidence selects by these, not by re-derived indicators
   confirmedCount: number;
   suspectedCount: number;
   entities: string[];
@@ -36,7 +37,14 @@ export interface Campaign {
 }
 
 export function severityOf(e: VerificationEvent): Severity {
-  if (e.verdict === "altered" || e.verdict === "invalid_provenance") return "confirmed";
+  // Only content-level tampering (edited content, swapped payment QR, replaced
+  // audio) is auto-"confirmed" external fraud. A failed signature or broken log
+  // (invalid_provenance) is a REGISTRY-INTEGRITY issue that needs human review —
+  // not an automatic fraud attribution against the (often legitimate) issuer it
+  // impersonates. That prevents a system-integrity incident from manufacturing
+  // "confirmed fraud" campaigns.
+  if (e.verdict === "altered") return "confirmed";
+  if (e.verdict === "invalid_provenance") return "suspected";
   if (e.verdict === "unverified" && (e.riskLevel === "high" || e.riskLevel === "critical"))
     return "suspected";
   return "low";
@@ -162,6 +170,7 @@ export function getCampaigns(): Campaign[] {
       id: stableId(identity),
       severity: confirmed > 0 ? "confirmed" : "suspected",
       eventCount: evs.length,
+      eventIds: evs.map((e) => e.id),
       confirmedCount: confirmed,
       suspectedCount: suspected,
       entities: [...entities],

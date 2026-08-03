@@ -4,8 +4,9 @@ The one sentence:
 > **PramaanSetu is Digital Public Infrastructure for content authenticity in the
 > securities market — a UPI/Aadhaar-style signed-provenance rail. SEBI and its
 > regulated intermediaries sign what is official; any investor verifies it in one
-> tap, on the web or inside WhatsApp/Telegram. AI only steps in to flag the fake
-> when no proof exists.**
+> tap, on the web or inside a chat app (Telegram today; WhatsApp Business API is
+> the same integration, next). AI only steps in to flag the fake when no proof
+> exists.**
 
 Open and close the demo on: **"Every other team built an AI that *guesses*
 whether something is fake. We built the rail that makes the genuine *provable* —
@@ -52,15 +53,18 @@ Why is yours different?"**
 >
 > **Two — verification where the scam lives.** Those standards failed because
 > victims never checked signatures in some settings screen. We put verification
-> **inside WhatsApp and Telegram** — forward the suspicious message to the bot
-> and get the verdict in the same chat the scam arrived in. No behaviour change,
-> no new app to open."
+> **inside the chat app** — today a working **Telegram** bot; forward the
+> suspicious message and get the verdict in the same chat the scam arrived in.
+> WhatsApp Business API is the same integration and is the next channel. No
+> behaviour change, no new app to open."
 
 Follow-up: **"How do you bootstrap before every issuer signs?"**
-> "We don't wait. We crawl SEBI's and the exchanges' **public** circulars and
-> fingerprint them, so a forged or altered version of any *existing* official
-> communication is already detectable on day one — zero issuer onboarding.
-> Issuer signing then layers on top for new communications."
+> "We don't wait for issuer onboarding. The day-one path **ingests SEBI's and
+> the exchanges' public circulars** and fingerprints them, so a forged or
+> altered version of any *existing* official communication is detectable with
+> zero onboarding. (The prototype ships a representative seeded corpus that
+> demonstrates this; the public-corpus ingestion pipeline is the onboarding
+> step.) Issuer signing then layers on top for new communications."
 
 ---
 
@@ -95,7 +99,8 @@ in [DEMO.md](DEMO.md). Open and close on the one line at the top of this file.
 - **Technology:** Ed25519 provenance + transparency log + multi-modal perceptual
   matching + a vision/audio deepfake detector with a measured confusion matrix.
 - **Feasibility:** SEBI can mandate signing; verify-in-chat needs no behaviour
-  change; public-corpus crawl bootstraps day one.
+  change; public-corpus ingestion is the day-one onboarding path (prototype
+  seeds a representative corpus).
 - **Scalability:** LSH index (~33–80× faster candidate search at 10k+ assets);
   Postgres/pgvector path documented.
 - **Alignment:** authentication of official communications is the exact gap SEBI
