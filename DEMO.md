@@ -27,8 +27,11 @@
    - SupTech radar: <http://localhost:3000/dashboard>
 6. If Gemini is configured, confirm `aiRiskEngine` is `true` in the health
    response.
-7. Clear any old filters on the SupTech radar.
-8. Record at 1080p and keep browser zoom near 100 percent.
+7. Save a **real AI-generated face** image locally for the synthetic-media step
+   (e.g. from thispersondoesnotexist.com). The built-in samples deliberately do
+   not include a fake "deepfake"; a real AI face is what the detector flags.
+8. Clear any old filters on the SupTech radar.
+9. Record at 1080p and keep browser zoom near 100 percent.
 
 ## Official problem links to show in the video
 
@@ -179,9 +182,10 @@ and official source when available.
 
 ### 3:30 to 4:15 | Killer feature 5: synthetic media and AI phishing
 
-**On screen:** Show the media input and verify the built-in synthetic-looking
-sample. Then switch to message input, load the known scam pattern, and verify
-it.
+**On screen:** In the media input, **upload a real AI-generated face** (saved
+beforehand — see the prep checklist) and run verification; the synthetic-media
+panel shows a high synthetic score with model + forensic signals. Then switch to
+message input, load the known scam pattern, and verify it.
 
 **Say:**
 
