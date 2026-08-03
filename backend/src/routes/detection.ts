@@ -8,9 +8,10 @@ export const detectionRouter = Router();
 detectionRouter.get("/metrics", async (_req, res) => {
   try {
     const metrics = await getDetectionMetrics();
-    // Keep the payload light: the per-sample breakdown can be large.
-    const { perSample, ...summary } = metrics;
-    res.json({ ...summary, sampleCount: perSample.length });
+    // Keep the payload light: drop the per-sample breakdown; report n as the count.
+    const { perSample: _perSample, ...summary } = metrics;
+    void _perSample;
+    res.json({ ...summary, sampleCount: metrics.n });
   } catch (e) {
     res.status(500).json({ error: `Could not compute detection metrics: ${(e as Error).message}` });
   }

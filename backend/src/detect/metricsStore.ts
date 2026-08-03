@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { evaluateDetector, type DetectionMetrics } from "./evaluation.js";
 import { buildIllustrativeCorpus, loadHeldOutCorpus } from "./sampleCorpus.js";
+import { heldoutMetrics } from "./heldoutMetrics.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const METRICS_PATH =
@@ -55,9 +56,15 @@ export async function computeMetrics(opts: { aiEnabled: boolean }): Promise<Dete
   return metrics;
 }
 
-/** Stored metrics, or a computed forensic-only baseline on first use. */
+/**
+ * Metrics to serve, in order of preference:
+ *   1. A fresh run written to data/detection-metrics.json (e.g. your own held-out run)
+ *   2. The pinned held-out snapshot (real numbers, survives a fresh clone / deploy)
+ *   3. A computed forensic-only illustrative baseline (last resort)
+ */
 export async function getDetectionMetrics(): Promise<DetectionMetrics> {
   const stored = readStored();
   if (stored) return stored;
+  if (heldoutMetrics && heldoutMetrics.n > 0) return heldoutMetrics;
   return computeMetrics({ aiEnabled: false });
 }

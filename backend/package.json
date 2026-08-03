@@ -13,7 +13,9 @@
     "benchmark": "tsx scripts/benchmark.mjs",
     "benchmark:scale": "tsx scripts/scale-benchmark.mjs",
     "benchmark:real": "tsx scripts/realistic-benchmark.mjs",
-    "benchmark:detection": "tsx scripts/detection-benchmark.mjs"
+    "benchmark:detection": "tsx scripts/detection-benchmark.mjs",
+    "dataset:fetch": "node scripts/fetch-detection-dataset.mjs",
+    "dataset:check": "node scripts/fetch-detection-dataset.mjs --validate"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

@@ -16,6 +16,10 @@
 
 const aiEnabled = process.argv.includes("--ai");
 
+// Load backend/.env so GEMINI_API_KEYS is available for the --ai run
+// (standalone scripts don't get the server's dotenv bootstrap otherwise).
+if (aiEnabled) await import("dotenv/config");
+
 // Keep Gemini truly off for the forensic-only run (so it is reproducible).
 if (!aiEnabled) process.env.GEMINI_API_KEYS = "";
 
