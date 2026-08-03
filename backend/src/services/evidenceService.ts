@@ -7,7 +7,7 @@
  */
 
 import { getStore } from "../db/store.js";
-import { getCampaigns, severityOf } from "./campaignService.js";
+import { getCampaigns, severityOf, normPhone, normHandle } from "./campaignService.js";
 import { verifyManifest, signJson } from "../crypto/signing.js";
 import { env } from "../config/env.js";
 import {
@@ -117,8 +117,10 @@ export function buildCampaignEvidence(campaignId: number) {
       const inEntity = campaign.entities.some(
         (x) => (e.impersonatedEntity ?? e.matchedIssuerName) === x,
       );
-      const inHandle = e.paymentHandles.some((h) => campaign.paymentHandles.includes(h));
-      const inPhone = e.phoneNumbers.some((p) => campaign.phoneNumbers.includes(p));
+      // Compare using the SAME canonical normalisation the campaign uses, so
+      // "+91 98123 45678" / "9812345678" (and casing on handles) still match.
+      const inHandle = e.paymentHandles.some((h) => campaign.paymentHandles.includes(normHandle(h)));
+      const inPhone = e.phoneNumbers.some((p) => campaign.phoneNumbers.includes(normPhone(p)));
       const inDomain = e.urls.some((u) => {
         const d = domainOf(u);
         return d != null && campaign.domains.includes(d);

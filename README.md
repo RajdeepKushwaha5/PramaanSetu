@@ -78,9 +78,10 @@ rate-limited:
   indicators.
 
 The model leads (0.68) and forensics corroborate (0.32) when both are
-available; forensic-only scores are capped so heuristics never over-convict a
-real photo. The detector deliberately shows restraint — a genuine photo or a
-plain digital graphic is not flagged as synthetic.
+available; forensic-only scores are capped to reduce the chance of
+over-convicting a real photo. The detector is tuned for restraint — on the
+included samples a genuine photo or a plain digital graphic is not flagged as
+synthetic — but this is a measured result on a small set, not a guarantee.
 
 ### SupTech radar
 
@@ -187,7 +188,8 @@ thresholds are prototype values and need calibration on real forwarded media.
 Audio is matched by a compact spectrogram signature: a recompressed copy of a
 signed recording (a forwarded voice note) verifies as a `derivative`, while an
 unrelated recording stays `unverified` (the threshold sits well below the
-distance to an unrelated clip, so it never false-matches).
+distance to an unrelated clip). On the test set this produced no false matches;
+that is a measured result on a small synthetic set, not a general guarantee.
 
 When no signed record matches at all, an `unverified` image, video, or audio
 file additionally receives a **synthetic-media assessment** (a 0–100 score with
@@ -306,18 +308,20 @@ comparison. A separate benchmark signs a large corpus and measures the search:
 npm run benchmark:scale        # or: npm run benchmark:scale -- 10000
 ```
 
-Latest local run at **10,001 signed assets** (correct recall on original /
-recompressed / altered / unrelated, no false matches):
+Representative local run at **10,001 signed assets** (correct recall on original
+/ recompressed / altered / unrelated, no false matches). Absolute timings vary
+with hardware; the ratio is the point:
 
 | Candidate search (probe precomputed) | Result |
 | --- | ---: |
-| LSH index (narrowed to ~48 candidates) | ~1.9 ms |
-| Full linear scan of all 10,001 assets | ~62 ms |
-| Speedup | ~33x |
+| LSH index (narrows to a few dozen candidates) | ~2–7 ms |
+| Full linear scan of all 10,001 assets | ~60–270 ms |
+| Speedup | ~30–70× (grows with corpus size) |
 
-The exact verdict is still decided by the precise changed-cell comparison; the
-index only narrows which assets are compared, so verdict correctness is
-unchanged. Production would move this to PostgreSQL + pgvector or FAISS.
+Run `npm run benchmark:scale` to reproduce on your machine. The exact verdict is
+still decided by the precise changed-cell comparison; the index only narrows
+which assets are compared, so verdict correctness is unchanged. Production would
+move this to PostgreSQL + pgvector or FAISS.
 
 ### Messaging-app channel (Telegram)
 

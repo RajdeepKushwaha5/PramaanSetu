@@ -62,6 +62,7 @@ export interface VerifyResult {
     perceptualDistance: number | null;
     logSeq: number;
     logEntryHash: string | null;
+    logIntegrityValid: boolean;
     revoked: boolean;
     expired: boolean;
     differences?: string[];
@@ -86,6 +87,7 @@ function publicMatch(
   const store = getStore();
   const issuer = store.getIssuer(asset.issuerId);
   const logEntry = store.getLog().find((e) => e.seq === asset.logSeq);
+  const provenance = store.verifyAssetProvenance(asset);
   return {
     assetId: asset.id,
     title: asset.title,
@@ -100,6 +102,7 @@ function publicMatch(
     perceptualDistance: distance,
     logSeq: asset.logSeq,
     logEntryHash: logEntry?.entryHash ?? null,
+    logIntegrityValid: provenance.ok,
     revoked: asset.revoked,
     expired: isExpired(asset),
   };
@@ -139,6 +142,16 @@ function resolveGenuineVerdict(
       verdict: "expired",
       sigValid,
       message: `This is a genuine ${name} communication but it has EXPIRED and is no longer current.`,
+    };
+  }
+  // Transparency-log integrity: the signature can be valid while the tamper-
+  // evident log is corrupted. A "proof" product must not report genuine then.
+  const provenance = store.verifyAssetProvenance(asset);
+  if (!provenance.ok) {
+    return {
+      verdict: "invalid_provenance",
+      sigValid,
+      message: `A record exists and its signature validates, but the tamper-evident transparency log FAILED integrity (${provenance.reason}). The registry may be compromised — do not trust this result.`,
     };
   }
   return {

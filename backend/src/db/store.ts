@@ -183,6 +183,26 @@ class Store {
     return { valid: true, brokenAt: null, reason: null };
   }
 
+  /**
+   * Confirm a specific asset's provenance is backed by an intact transparency
+   * log: the whole hash chain validates AND this asset has a log entry that
+   * matches its id and content hash. A genuine verdict must NOT be returned if
+   * this fails — otherwise a corrupted registry could still show "original".
+   */
+  verifyAssetProvenance(asset: SignedAsset): { ok: boolean; reason: string | null } {
+    const chain = this.verifyLog();
+    if (!chain.valid) {
+      return { ok: false, reason: chain.reason ?? "transparency-log hash chain broken" };
+    }
+    const entry = this.db.log.find((e) => e.seq === asset.logSeq);
+    if (!entry) return { ok: false, reason: "no transparency-log entry for this record" };
+    if (entry.assetId !== asset.id) return { ok: false, reason: "log entry references a different asset" };
+    if (entry.contentHash !== asset.contentHash) {
+      return { ok: false, reason: "log entry content-hash mismatch" };
+    }
+    return { ok: true, reason: null };
+  }
+
   // ---- Verification events ----
   addEvent(input: Omit<VerificationEvent, "id" | "timestamp">): VerificationEvent {
     const event: VerificationEvent = {

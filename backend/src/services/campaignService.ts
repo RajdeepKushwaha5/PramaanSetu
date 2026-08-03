@@ -47,8 +47,13 @@ function normEntity(s: string | null): string | null {
   const n = s.toLowerCase().replace(/[^a-z0-9]/g, "");
   return n.length >= 3 ? n : null;
 }
-function normPhone(s: string): string {
+/** Canonical last-10-digit phone form. Shared by clustering AND evidence. */
+export function normPhone(s: string): string {
   return s.replace(/\D/g, "").slice(-10);
+}
+/** Canonical payment-handle form. Shared by clustering AND evidence. */
+export function normHandle(s: string): string {
+  return s.trim().toLowerCase();
 }
 function domainOf(url: string): string | null {
   try {
@@ -143,8 +148,16 @@ export function getCampaigns(): Campaign[] {
     }
 
     // Stable, content-derived ID so /api/evidence/:id links stay valid as the
-    // radar recomputes (instead of a positional counter that reshuffles).
-    const identity = [...entities, ...handles, ...phones, ...domains].sort((a, b) => a.localeCompare(b)).join("|");
+    // radar recomputes (instead of a positional counter that reshuffles). When a
+    // campaign has NO shared indicators (identity would be empty), fall back to
+    // the events' own content hashes / ids so two indicator-less campaigns can't
+    // collide onto the same id (which would break evidence export).
+    const indicatorIdentity = [...entities, ...handles, ...phones, ...domains]
+      .sort((a, b) => a.localeCompare(b))
+      .join("|");
+    const identity =
+      indicatorIdentity ||
+      `events:${evs.map((e) => e.contentHash ?? e.id).sort((a, b) => a.localeCompare(b)).join(",")}`;
     campaigns.push({
       id: stableId(identity),
       severity: confirmed > 0 ? "confirmed" : "suspected",

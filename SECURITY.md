@@ -32,6 +32,11 @@ build tooling**, not in code we import or ship:
 | PostCSS XSS via `</style>` in CSS stringify | `postcss` | `next/node_modules/postcss` |
 | PostCSS `sourceMappingURL` path traversal / file disclosure (x2) | `postcss` | `next/node_modules/postcss` |
 | sharp → libvips CVEs | `sharp` | `next` image optimiser |
+| `brace-expansion` ReDoS | `brace-expansion` | ESLint dev-dependency chain (lint only) |
+
+The `brace-expansion` advisory is pulled in transitively by **ESLint**, a
+dev-only tool that never ships in the built frontend or runs at request time.
+It affects `npm run lint`, not the deployed app.
 
 Why this is a low real-world risk here:
 

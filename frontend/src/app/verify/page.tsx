@@ -43,6 +43,7 @@ interface Match {
   perceptualDistance: number | null;
   logSeq?: number;
   logEntryHash?: string | null;
+  logIntegrityValid?: boolean;
   revoked?: boolean;
   expired?: boolean;
   differences?: string[];
@@ -556,7 +557,7 @@ function TrustChain({ result }: { result: VerifyResult }) {
     { label: "issuer identity", value: `${m.issuerName} · ${m.sebiRegNo}`, ok: true },
     { label: "content hash", value: `SHA–256 · ${(result.contentHash ?? "").slice(0, 16)}…`, ok: true },
     { label: "issuer signature", value: m.signatureValid ? "Ed25519 · valid" : "Ed25519 · NOT valid", ok: m.signatureValid },
-    { label: "transparency log", value: m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "—", ok: true },
+    { label: "transparency log", value: m.logIntegrityValid === false ? "INTEGRITY FAILED" : m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "—", ok: m.logIntegrityValid !== false },
     { label: "record status", value: status, ok: status === "active" },
     { label: "evidence", value: "tamper-evident registry", ok: true },
   ];

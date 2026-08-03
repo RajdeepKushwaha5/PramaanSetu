@@ -116,11 +116,77 @@ test("transparency log stays intact and references real assets", () => {
   assert.equal(valid, true, reason ?? "");
 });
 
+test("a corrupted transparency log makes 'original' impossible", async () => {
+  const store = getStore();
+  // Sign a fresh text record, confirm it verifies as original.
+  const text = `Chain integrity test ${Date.now()}`;
+  await signContent({ issuerId, title: "Chain test", mimeType: "text/plain", text });
+  const before = await verifyContent({ text });
+  assert.equal(before.verdict, "original");
+  assert.equal(before.match?.logIntegrityValid, true);
+
+  // Corrupt a log entry's hash — the chain is now broken.
+  const log = store.getLog();
+  const target = log[Math.floor(log.length / 2)];
+  const originalHash = target.entryHash;
+  target.entryHash = "deadbeef".repeat(8);
+  assert.equal(store.verifyLog().valid, false, "log should now be broken");
+
+  // The same signed content must NOT verify as original any more.
+  const after = await verifyContent({ text });
+  assert.notEqual(after.verdict, "original", "a broken log must block a genuine verdict");
+  assert.equal(after.verdict, "invalid_provenance");
+  assert.match(after.message, /transparency log/i);
+
+  target.entryHash = originalHash; // restore for later tests
+  assert.equal(store.verifyLog().valid, true);
+});
+
 test("QR fraud reaches a campaign with the fraud payee as an indicator", async () => {
   const { getCampaigns } = await import("../src/services/campaignService.js");
   const camps = getCampaigns();
   const withPayee = camps.find((c) => c.paymentHandles.includes("fraudster12@ybl"));
   assert.ok(withPayee, "expected a campaign carrying the swapped QR payee");
+});
+
+test("indicator-less campaigns get unique (non-colliding) ids", async () => {
+  const { getCampaigns } = await import("../src/services/campaignService.js");
+  const store = getStore();
+  // Two high-risk events with NO extractable indicators — previously both
+  // hashed an empty identity to the SAME id.
+  for (const h of ["indicatorless-a", "indicatorless-b"]) {
+    store.addEvent({
+      verdict: "unverified", mediaType: "text", contentHash: h,
+      matchedAssetId: null, matchedIssuerName: null, impersonatedEntity: null,
+      paymentHandles: [], phoneNumbers: [], urls: [], tamperType: null,
+      riskLevel: "critical", riskScore: 95,
+    });
+  }
+  const ids = getCampaigns().map((c) => c.id);
+  assert.equal(new Set(ids).size, ids.length, "every campaign id must be unique");
+});
+
+test("evidence pack includes events despite phone normalization", async () => {
+  const { getCampaigns } = await import("../src/services/campaignService.js");
+  const { buildCampaignEvidence } = await import("../src/services/evidenceService.js");
+  const store = getStore();
+  // Two events linked ONLY by the same phone in different formats.
+  store.addEvent({
+    verdict: "unverified", mediaType: "text", contentHash: "phone-fmt-1",
+    matchedAssetId: null, matchedIssuerName: null, impersonatedEntity: null,
+    paymentHandles: [], phoneNumbers: ["+91 98765 43210"], urls: [], tamperType: null,
+    riskLevel: "critical", riskScore: 96,
+  });
+  store.addEvent({
+    verdict: "unverified", mediaType: "text", contentHash: "phone-fmt-2",
+    matchedAssetId: null, matchedIssuerName: null, impersonatedEntity: null,
+    paymentHandles: [], phoneNumbers: ["9876543210"], urls: [], tamperType: null,
+    riskLevel: "high", riskScore: 82,
+  });
+  const camp = getCampaigns().find((c) => c.phoneNumbers.includes("9876543210"));
+  assert.ok(camp, "the two phone-linked events should form a campaign");
+  const pack = buildCampaignEvidence(camp!.id) as { relatedSubmissions: unknown[] };
+  assert.ok(pack.relatedSubmissions.length >= 2, "both phone formats must be in the evidence pack");
 });
 
 test("evidence pack is signed and carries methodology", async () => {

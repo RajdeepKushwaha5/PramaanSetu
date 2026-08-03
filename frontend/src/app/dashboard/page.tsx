@@ -168,7 +168,7 @@ export default function DashboardPage() {
 
       <section className="radar-statusbar">
         <div>
-          <span className="live-mark"><i /> LIVE INGESTION</span>
+          <span className="live-mark"><i /> LIVE REFRESH</span>
           <span>refresh / 5s</span>
           <span>{updatedAt ? `updated ${updatedAt.toLocaleTimeString()}` : "connecting…"}</span>
         </div>

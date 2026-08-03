@@ -56,6 +56,22 @@ export function formatVerdict(r: VerifyResult): string {
     }
   }
 
+  // Synthetic-media detection (same as the web verifier) for unsigned media.
+  const s = r.synthetic;
+  if (s && (s.aiAvailable || s.forensicAvailable)) {
+    const labelText =
+      s.label === "likely-synthetic"
+        ? "LIKELY AI-GENERATED / DEEPFAKE"
+        : s.label === "uncertain"
+          ? "UNCERTAIN — mixed indicators"
+          : "no strong synthetic indicators";
+    lines.push("");
+    lines.push(`🧪 Synthetic-media check: <b>${esc(labelText)}</b> (${esc(s.syntheticScore)}/100)`);
+    const topSignal = s.signals?.[0];
+    if (topSignal) lines.push(esc(`${topSignal.label} — ${topSignal.detail}`));
+    lines.push("<i>Detection is a signal, not proof.</i>");
+  }
+
   if (r.risk && !("unavailable" in r.risk)) {
     lines.push("");
     lines.push(`AI risk: ${esc(String(r.risk.riskLevel).toUpperCase())} (${esc(r.risk.riskScore)}/100)`);

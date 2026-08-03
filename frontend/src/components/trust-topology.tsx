@@ -11,7 +11,7 @@
  * instead of just looking like a diagram.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface NodeDef {
@@ -140,8 +140,39 @@ export function TrustTopology() {
   const router = useRouter();
   const [beat, setBeat] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [tokenPos, setTokenPos] = useState<{ x: number; y: number }>({ x: -30, y: 132 });
+  const measurePathRef = useRef<SVGPathElement>(null);
 
   const current = BEATS[beat];
+
+  // Drive the travelling token with a single React-controlled position (one
+  // token, explicit interpolation along the path) — no SMIL, so old and new
+  // states can never render together. Honours reduced-motion by jumping to the
+  // path end instead of animating.
+  useEffect(() => {
+    const path = measurePathRef.current;
+    if (!path) return;
+    const len = path.getTotalLength();
+    const reduce =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      const end = path.getPointAtLength(len);
+      setTokenPos({ x: end.x, y: end.y });
+      return;
+    }
+    let raf = 0;
+    let start = 0;
+    const dur = current.dur;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const t = Math.min(1, (ts - start) / dur);
+      const p = path.getPointAtLength(t * len);
+      setTokenPos({ x: p.x, y: p.y });
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [beat, current.dur, current.tokenPath]);
 
   // Respect reduced-motion: stop autoplay so captions don't change on their own.
   useEffect(() => {
@@ -228,12 +259,16 @@ export function TrustTopology() {
           </g>
         ))}
 
-        {/* Travelling message token. Keyed on the beat so it remounts and
-            plays its motion once per step. */}
-        <g className={`topology-token tone-${current.tone}`} key={beat} aria-hidden="true">
+        {/* Hidden path, used only to measure the token's route for this beat. */}
+        <path ref={measurePathRef} d={current.tokenPath} fill="none" stroke="none" />
+        {/* Single React-controlled travelling token (no SMIL). */}
+        <g
+          className={`topology-token tone-${current.tone}`}
+          transform={`translate(${tokenPos.x} ${tokenPos.y})`}
+          aria-hidden="true"
+        >
           <circle r="9" />
           <circle className="topology-token-core" r="3.5" />
-          <animateMotion dur={`${current.dur}ms`} fill="freeze" calcMode="linear" path={current.tokenPath} />
         </g>
       </svg>
 
