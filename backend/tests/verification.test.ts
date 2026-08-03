@@ -230,3 +230,19 @@ test("unsigned image detection is recorded for the SupTech dashboard", async () 
   const stats = getDashboardStats() as { detection?: { mediaScanned: number } };
   assert.ok((stats.detection?.mediaScanned ?? 0) > 0, "dashboard must tally scanned media");
 });
+
+test("detection-performance harness produces a valid confusion matrix (forensic-only)", async () => {
+  const { evaluateDetector } = await import("../src/detect/evaluation.js");
+  const { buildIllustrativeCorpus } = await import("../src/detect/sampleCorpus.js");
+  const corpus = await buildIllustrativeCorpus();
+  const m = await evaluateDetector(corpus, { dataset: "illustrative", datasetNote: "test", aiEnabled: false });
+  const { tp, tn, fp, fn } = m.confusion;
+  assert.equal(tp + tn + fp + fn, m.n, "confusion matrix must account for every sample");
+  for (const v of [m.accuracy, m.precision, m.recall, m.specificity, m.f1]) {
+    assert.ok(v >= 0 && v <= 1, "metrics must be in [0,1]");
+  }
+  // The deterministic forensic layer should catch the flat renders (high recall)
+  // without cratering on the authentic set.
+  assert.ok(m.recall >= 0.6, `expected recall >= 0.6, got ${m.recall}`);
+  assert.ok(m.accuracy >= 0.7, `expected accuracy >= 0.7, got ${m.accuracy}`);
+});

@@ -39,3 +39,10 @@ AGENTS.md
 
 # Local FFmpeg binary (not committed)
 .tools/
+
+# Held-out detection images (user-provided; not committed)
+backend/datasets/detection/**/*.png
+backend/datasets/detection/**/*.jpg
+backend/datasets/detection/**/*.jpeg
+backend/datasets/detection/**/*.webp
+backend/datasets/detection/**/*.bmp

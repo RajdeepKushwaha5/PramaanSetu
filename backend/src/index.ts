@@ -11,6 +11,7 @@ import { verifyRouter } from "./routes/verify.js";
 import { campaignsRouter } from "./routes/campaigns.js";
 import { seedRouter } from "./routes/seed.js";
 import { revokeRouter } from "./routes/revoke.js";
+import { detectionRouter } from "./routes/detection.js";
 import { startTelegramBot } from "./bot/telegram.js";
 
 const app = express();
@@ -49,6 +50,7 @@ app.get("/", (_req, res) => {
       "GET  /api/evidence",
       "GET  /api/evidence/:campaignId",
       "GET  /api/log",
+      "GET  /api/detection/metrics",
       "POST /api/seed",
     ],
   });
@@ -61,7 +63,18 @@ app.use("/api/sign", signRouter);
 app.use("/api/verify", verifyRouter);
 app.use("/api/seed", seedRouter);
 app.use("/api/revoke", revokeRouter);
+app.use("/api/detection", detectionRouter);
 app.use("/api", campaignsRouter);
+
+// Production config sanity checks (warn loudly rather than allow-all silently).
+if ((process.env.NODE_ENV ?? "development") === "production") {
+  if (!process.env.CORS_ORIGIN) {
+    console.warn("[config] NODE_ENV=production but CORS_ORIGIN is unset — CORS is permissive. Set CORS_ORIGIN to your frontend origin(s).");
+  }
+  if ((process.env.DEMO_MODE === "1" || process.env.DEMO_MODE === "true")) {
+    console.warn("[config] DEMO_MODE is ON in production — demo issuers can sign without a key. Intended only for a public demo.");
+  }
+}
 
 app.listen(PORT, () => {
   console.log(`PramaanSetu backend listening on http://localhost:${PORT}`);

@@ -276,6 +276,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      <DetectionPerformance />
+
       <section className="indicator-section">
         <div className="section-heading compact">
           <div>
@@ -488,6 +490,113 @@ function TopList({ title, code, items, onPick, filter, type, innerRef }: { title
           </button>
         );
       }) : <div className="empty-state">No indicators observed</div>}
+    </div>
+  );
+}
+
+interface DetectionMetrics {
+  dataset: "held-out" | "illustrative";
+  datasetNote: string;
+  aiEnabled: boolean;
+  decisionThreshold: number;
+  n: number;
+  confusion: { tp: number; tn: number; fp: number; fn: number };
+  accuracy: number;
+  precision: number;
+  recall: number;
+  specificity: number;
+  f1: number;
+}
+
+function pct(x: number): string {
+  return `${(x * 100).toFixed(1)}%`;
+}
+
+function DetectionPerformance() {
+  const [m, setM] = useState<DetectionMetrics | null>(null);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(async () => {
+      try {
+        const r = await fetch(apiUrl("/api/detection/metrics"));
+        if (!r.ok) throw new Error();
+        setM(await r.json());
+      } catch {
+        setErr(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  return (
+    <section className="performance-section">
+      <div className="section-heading compact">
+        <div>
+          <p className="eyebrow">DETECTION PERFORMANCE / MEASURED</p>
+          <h2>evidence, not adjectives.<br /><span>a reproducible confusion-matrix harness.</span></h2>
+        </div>
+      </div>
+
+      {err && <div className="error-box">Detection metrics unavailable — is the backend running?</div>}
+      {!err && !m && <div className="empty-state">measuring…</div>}
+
+      {m && (
+        <div className="performance-grid">
+          <div className="perf-matrix-card">
+            <div className="panel-header">
+              <strong>confusion matrix</strong>
+              <span>n = {m.n}</span>
+            </div>
+            <div className="confusion">
+              <span className="cm-corner" />
+              <span className="cm-head">pred synthetic</span>
+              <span className="cm-head">pred authentic</span>
+              <span className="cm-side">actual synthetic</span>
+              <span className="cm-cell good" title="true positive">{m.confusion.tp}<i>TP</i></span>
+              <span className="cm-cell warn" title="false negative (missed)">{m.confusion.fn}<i>FN</i></span>
+              <span className="cm-side">actual authentic</span>
+              <span className="cm-cell warn" title="false positive (false alarm)">{m.confusion.fp}<i>FP</i></span>
+              <span className="cm-cell good" title="true negative">{m.confusion.tn}<i>TN</i></span>
+            </div>
+            <div className="perf-badges">
+              <span className={`perf-badge ${m.dataset === "held-out" ? "held" : "illus"}`}>
+                {m.dataset === "held-out" ? "held-out set" : "illustrative set"}
+              </span>
+              <span className="perf-badge">{m.aiEnabled ? "vision model + forensics" : "forensics only"}</span>
+              <span className="perf-badge">decision score ≥ {m.decisionThreshold}</span>
+            </div>
+          </div>
+
+          <div className="perf-metrics-card">
+            <div className="perf-kpis">
+              <PerfKpi label="Accuracy" value={pct(m.accuracy)} />
+              <PerfKpi label="Recall" value={pct(m.recall)} sub="of fakes caught" />
+              <PerfKpi label="Specificity" value={pct(m.specificity)} sub="of real cleared" />
+              <PerfKpi label="Precision" value={pct(m.precision)} />
+              <PerfKpi label="F1" value={pct(m.f1)} />
+            </div>
+            <p className="perf-note">{m.datasetNote}</p>
+            {m.dataset === "illustrative" && (
+              <p className="perf-cta">
+                For the submission figure, drop real deepfakes and photographs into
+                {" "}<code>backend/datasets/detection/&#123;synthetic,authentic&#125;</code>{" "}
+                and run <code>npm run benchmark:detection -- --ai</code>.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PerfKpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="perf-kpi">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {sub && <i>{sub}</i>}
     </div>
   );
 }

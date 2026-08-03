@@ -12,7 +12,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "benchmark": "tsx scripts/benchmark.mjs",
     "benchmark:scale": "tsx scripts/scale-benchmark.mjs",
-    "benchmark:real": "tsx scripts/realistic-benchmark.mjs"
+    "benchmark:real": "tsx scripts/realistic-benchmark.mjs",
+    "benchmark:detection": "tsx scripts/detection-benchmark.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

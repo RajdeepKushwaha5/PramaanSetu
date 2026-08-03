@@ -96,10 +96,14 @@ export async function detectSynthetic(input: {
   mediaType: MediaType;
   bytes: Buffer;
   mimeType: string;
+  /** Force the vision/audio model on or off (default: on when keys exist).
+   *  The evaluation harness uses `false` for a deterministic forensic-only run. */
+  aiEnabled?: boolean;
 }): Promise<SyntheticAssessment> {
   const { bytes, mimeType } = input;
   const ext = extFromMime(mimeType);
   const modality = input.mediaType as SyntheticModality;
+  const useAi = input.aiEnabled ?? hasKeys();
 
   let ai: AiDetection | null = null;
   let forensic: { score: number; signals: DetectionSignal[]; available: boolean } | null = null;
@@ -108,7 +112,7 @@ export async function detectSynthetic(input: {
   if (modality === "image") {
     const f = await imageForensics(bytes);
     forensic = { ...f, available: true };
-    if (hasKeys()) ai = await safeAi(() => detectSyntheticImage(toInline(bytes, mimeType)));
+    if (useAi) ai = await safeAi(() => detectSyntheticImage(toInline(bytes, mimeType)));
   } else if (modality === "video") {
     const frames = await extractFrames(bytes, ext, 4);
     framesAnalysed = frames.length;
@@ -122,7 +126,7 @@ export async function detectSynthetic(input: {
         score: audF.available ? Math.round(0.6 * imgF.score + 0.4 * audF.score) : imgF.score,
         signals: [...imgF.signals, ...audF.signals],
       };
-      if (hasKeys()) {
+      if (useAi) {
         const inlineFrames = frames.map((fr) => toInline(fr, "image/png"));
         ai = await safeAi(() => detectSyntheticFrames(inlineFrames));
       }
@@ -134,7 +138,7 @@ export async function detectSynthetic(input: {
   } else if (modality === "audio") {
     const f = audioForensics(bytes, ext);
     if (f.available) forensic = f;
-    if (hasKeys()) ai = await safeAi(() => detectSyntheticAudio(toInline(bytes, mimeType)));
+    if (useAi) ai = await safeAi(() => detectSyntheticAudio(toInline(bytes, mimeType)));
   }
 
   const c = combine(ai, forensic);

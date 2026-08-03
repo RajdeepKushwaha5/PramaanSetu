@@ -91,6 +91,11 @@ export default function Home() {
           <p className="hero-lede">
             {copy.lede}
           </p>
+          <p className="dpi-line">
+            <span className="tag blue">DPI</span>
+            Public infrastructure for content authenticity — a UPI/Aadhaar-style
+            signed-provenance rail SEBI can operate for the securities market.
+          </p>
           <div className="hero-actions">
             <Link href={primaryHref} className="button primary">
               {copy.primary} <span>→</span>

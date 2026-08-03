@@ -1,0 +1,32 @@
+# Render blueprint for the PramaanSetu backend (Docker, so FFmpeg is included).
+# Deploy the frontend to Vercel (see DEPLOY.md) and point NEXT_PUBLIC_API_URL at
+# this service's URL.
+services:
+  - type: web
+    name: pramaansetu-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      # Set to your deployed frontend origin(s), comma-separated.
+      - key: CORS_ORIGIN
+        sync: false
+      # Comma-separated Gemini keys (optional; enables AI risk + deepfake vision).
+      - key: GEMINI_API_KEYS
+        sync: false
+      # Protects issuer creation / production seeding.
+      - key: ADMIN_API_KEY
+        sync: false
+      - key: FFMPEG_PATH
+        value: ffmpeg
+      # Keep demo mode on for a public jury demo (keyless demo-issuer signing).
+      # Set to 0 for a real deployment.
+      - key: DEMO_MODE
+        value: "1"

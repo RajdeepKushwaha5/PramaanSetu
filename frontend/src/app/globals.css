@@ -5322,3 +5322,170 @@ textarea.form-control {
 .record-status.committed i { background: var(--green); }
 .record-status.signing { color: var(--orange); }
 .signing-step.done span { border-color: var(--green); color: var(--green); }
+
+/* ---- detection performance (confusion matrix + KPIs) ---- */
+.performance-section {
+  padding-block: clamp(40px, 6vw, 90px);
+  padding-inline: var(--section-pad-x, clamp(24px, 3.5vw, 54px));
+  border-top: 1px solid var(--line);
+}
+.performance-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+  margin-top: 20px;
+}
+.perf-matrix-card,
+.perf-metrics-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.perf-matrix-card .panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.confusion {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px;
+  padding: 18px;
+  align-items: stretch;
+}
+.cm-corner { }
+.cm-head,
+.cm-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: center;
+}
+.cm-side {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 6px 0;
+}
+.cm-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 76px;
+  border-radius: 10px;
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line);
+}
+.cm-cell i {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+.cm-cell.good { background: var(--green-soft); color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, var(--line)); }
+.cm-cell.warn { background: var(--orange-soft); color: var(--orange); border-color: color-mix(in srgb, var(--orange) 40%, var(--line)); }
+.perf-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+.perf-badge {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+}
+.perf-badge.held { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+.perf-badge.illus { color: var(--orange); border-color: var(--orange); background: var(--orange-soft); }
+.perf-metrics-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.perf-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 12px;
+}
+.perf-kpi {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--surface);
+}
+.perf-kpi span {
+  display: block;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.perf-kpi strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.perf-kpi i {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--muted);
+}
+.perf-note {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.perf-cta {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.perf-cta code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-3, var(--surface));
+  border: 1px solid var(--line);
+}
+@media (max-width: 820px) {
+  .performance-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- DPI positioning line (homepage hero) ---- */
+.dpi-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 620px;
+}
+.dpi-line .tag {
+  flex: none;
+}

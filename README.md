@@ -7,6 +7,13 @@ really came from the organisation named in it. Issuers can sign official
 messages and media, investors can verify suspicious content, and regulators can
 see related fraud reports as connected campaigns.
 
+Think of it as **Digital Public Infrastructure for content authenticity** — a
+UPI/Aadhaar-style signed-provenance rail for the securities market. SEBI and its
+regulated intermediaries sign what is official; any investor verifies it in one
+tap, on the web or inside WhatsApp/Telegram. AI only steps in to flag the fake
+when no signed proof exists. See [PITCH.md](PITCH.md) for the positioning and
+Q&A playbook.
+
 Built for SEBI Securities Market TechSprint 2026, Problem Statement 1:
 AI-driven detection of synthetic media and phishing.
 
@@ -248,6 +255,46 @@ add feature/keypoint-based matching (e.g. ORB) for rotation. This is a
 synthetic-content benchmark; a held-out set from real WhatsApp/Telegram
 forwarding and camera photos is still future work.
 
+### Detection performance (confusion matrix)
+
+PS1 asks for "clear evidence of detection performance". PramaanSetu ships a
+reproducible evaluation harness that runs the synthetic-media detector over a
+labelled corpus and reports a confusion matrix and standard metrics. It is
+surfaced live at `GET /api/detection/metrics` and on the SupTech dashboard.
+
+```bash
+npm run benchmark:detection            # forensic layer only (deterministic)
+npm run benchmark:detection -- --ai    # vision model + forensics
+```
+
+The decision point is the product's real operating threshold (a synthetic score
+of 34 — the boundary below which content is cleared as *likely-authentic*).
+
+Latest local run — **deterministic forensic layer only**, on the built-in
+illustrative set (n = 16):
+
+| Metric | Result |
+| --- | ---: |
+| Accuracy | 87.5% |
+| Recall (fakes caught) | 100% |
+| Specificity (real cleared) | 75% |
+| Precision | 80% |
+| F1 | 88.9% |
+
+**Honest read:** these numbers are the *forensic layer alone* on an
+**illustrative** proxy set (smooth AI-render-like vs camera-noise-like images) —
+**not a real deepfake benchmark.** They show the expected behaviour of a
+noise/ELA heuristic: it catches every rendered image (100% recall) but
+over-flags two very smooth authentic images (75% specificity) — which is exactly
+why the vision model leads and forensics only corroborate. For the real
+submission figure, drop a held-out set of genuine photos and real
+AI-generated/deepfake images into
+`backend/datasets/detection/{authentic,synthetic}` and run
+`npm run benchmark:detection -- --ai`; the harness reports on your held-out data
+and the dashboard badge switches from *illustrative* to *held-out*. The value
+here is the **reproducible, honest measurement methodology**, not a single
+hero number.
+
 ### Scalability
 
 Verification must compare a submitted image against every signed asset. A plain
@@ -288,7 +335,7 @@ Run the backend test suite from the repository root:
 npm test
 ```
 
-The current suite contains 18 tests covering:
+The current suite contains 19 tests covering:
 
 - exact signed images and text
 - recompressed image matching
@@ -300,6 +347,7 @@ The current suite contains 18 tests covering:
 - signed evidence packs
 - video verification (genuine / recompressed / voice-clone)
 - audio provenance (signed / recompressed-copy / unrelated, no false match)
+- detection-performance harness (valid confusion matrix, forensic layer)
 - synthetic-media detection: forensic signal fires on AI-render-like media,
   separates it from camera-like media with no false alarm, and is tallied for
   the SupTech dashboard
@@ -407,6 +455,7 @@ is ignored by Git.
 | `GET` | `/api/dashboard` | Aggregate regulator metrics |
 | `GET` | `/api/events` | Return the latest 100 verification events |
 | `GET` | `/api/log` | Inspect transparency log entries and integrity |
+| `GET` | `/api/detection/metrics` | Detection-performance confusion matrix and metrics |
 | `GET` | `/api/evidence` | Export a signed system snapshot |
 | `GET` | `/api/evidence/:campaignId` | Export a signed campaign evidence pack |
 
