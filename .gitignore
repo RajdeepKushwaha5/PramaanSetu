@@ -46,3 +46,7 @@ backend/datasets/detection/**/*.jpg
 backend/datasets/detection/**/*.jpeg
 backend/datasets/detection/**/*.webp
 backend/datasets/detection/**/*.bmp
+
+# Private demo/pitch prep (kept local, not published)
+DEMO.md
+PITCH.md
