@@ -12,8 +12,7 @@ UPI/Aadhaar-style signed-provenance rail for the securities market. SEBI and its
 regulated intermediaries sign what is official; any investor verifies it in one
 tap, on the web or inside a chat app (a working Telegram bot today; WhatsApp
 Business API is the same integration, planned next). AI only steps in to flag
-the fake when no signed proof exists. See [PITCH.md](PITCH.md) for the
-positioning and Q&A playbook.
+the fake when no signed proof exists.
 
 Built for SEBI Securities Market TechSprint 2026, Problem Statement 1:
 AI-driven detection of synthetic media and phishing.
@@ -102,10 +101,6 @@ screens are available:
 | Signing rail | <http://localhost:3000/issuer> | Seed demo issuers and sign content |
 | SupTech radar | <http://localhost:3000/dashboard> | Review metrics, campaigns, and shared indicators |
 
-For the full guided 5–7 minute demo (mock roles, deepfake detection, swapped-QR,
-voice-clone, audio provenance, campaign linking, revocation) see
-[DEMO.md](DEMO.md).
-
 ### Two-minute walkthrough
 
 1. Open the signing rail and select **initialise demo registry**.
@@ -120,10 +115,57 @@ voice-clone, audio provenance, campaign linking, revocation) see
 
 The seed endpoint also generates a full demo set — an original image, a
 recompressed copy, an altered image/PDF with a replaced payment QR, a genuine
-video and a voice-cloned one, a signed audio advisory with a recompressed copy,
-and unsigned "flat render" / "camera-like" samples for the synthetic detector.
-These are returned as base64 values from `POST /api/seed` for deterministic API
+video and a voice-cloned one, and a signed audio advisory with a recompressed
+copy. These are returned as base64 values from `POST /api/seed` for deterministic API
 and one-click UI demonstrations.
+
+## How evaluators can test it (with your own data)
+
+The system is fully functional — nothing is mocked except the login. You can
+test every path with your own files. Start on **/issuer**, click **initialise
+demo registry** once, then:
+
+**1. Prove your own communication is genuine (the core idea)**
+
+1. On **/issuer** (Issuer role), type any title and message — or upload your own
+   image / PDF / video / audio — and click **sign & register**.
+2. Click **verify a copy** (or go to **/verify** and submit the same content).
+   → Verdict: **Verified Original**, with the full cryptographic trust chain
+   (issuer identity, SHA-256, Ed25519 signature, transparency-log integrity).
+3. Change one byte and verify again → it will **not** be called original.
+
+**2. Catch tampering**
+
+- Verify the built-in **forged QR** sample, or sign a document with an approved
+  payment handle, then submit a copy whose QR points elsewhere → **Altered**,
+  with the fraudulent payee named.
+- Verify the built-in **voice-cloned video** → **Altered** (audio replaced).
+
+**3. Detect an AI-generated / deepfake file (no signed record needed)**
+
+- Upload **any real AI-generated image or deepfake** you have (e.g. from
+  thispersondoesnotexist.com or any generator). → **Unverified** plus a
+  **synthetic-media score** with model + forensic reasons. Upload a real
+  photograph → it should stay low. Measured performance is on the SupTech
+  dashboard and at `GET /api/detection/metrics`.
+
+**4. Catch phishing text**
+
+- On **/verify**, paste any scam-style investment message with a UPI handle or
+  phone number → **Unverified + AI risk**, with the indicators extracted.
+
+**5. See the regulator view**
+
+- Open **/dashboard** (Regulator role). Your test events appear as linked
+  **campaigns**; click any indicator to trace it, and **export a signed evidence
+  pack**.
+
+Honest note: an **unsigned** genuine document correctly returns **Unverified**
+(we never fabricate provenance) — to test the provenance path on your own file,
+sign it on **/issuer** first, then verify it. Independent verification is
+possible too: every issuer's public key is exposed at
+`GET /api/issuers/:id/key`, so an Ed25519 signature can be checked without
+trusting this backend.
 
 ## Architecture
 
