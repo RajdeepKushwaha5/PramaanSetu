@@ -3721,9 +3721,11 @@ button.toplist-row.active {
 .button.danger {
   border-color: var(--red);
   color: var(--red);
+  background: transparent;
 }
 .button.danger:hover:not(:disabled) {
   background: var(--red-soft);
+  border-color: var(--red);
 }
 .signing-receipt.is-revoked .receipt-check {
   color: var(--red);
