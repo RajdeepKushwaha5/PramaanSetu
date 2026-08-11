@@ -30,3 +30,13 @@ services:
       # Set to 0 for a real deployment.
       - key: DEMO_MODE
         value: "1"
+      # Deterministic demo keys: set to any fixed random string. Without it, a
+      # restart on Render's ephemeral disk regenerates different keys and any
+      # proof bundle a judge already downloaded stops verifying.
+      - key: PRAMAAN_DEMO_SEED
+        sync: false
+      # Optional: set to run the Telegram verifier bot (@BotFather token). The
+      # local .env token is gitignored and NOT deployed, so set it here to enable
+      # the bot in production.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false

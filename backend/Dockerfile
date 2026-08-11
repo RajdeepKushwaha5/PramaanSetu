@@ -1,5 +1,7 @@
 # PramaanSetu backend — includes FFmpeg for video/audio fingerprinting.
-FROM node:20-bookworm-slim
+# Node 22+ is required by pdfjs-dist (>=22.13, PDF rendering) and file-type
+# (>=22, upload MIME validation); it also matches the local dev runtime.
+FROM node:22-bookworm-slim
 
 # FFmpeg powers video frame extraction and audio decoding/fingerprinting.
 RUN apt-get update \

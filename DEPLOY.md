@@ -74,6 +74,23 @@ so verification and the dashboard have data.
 
 **Frontend** (Vercel): `NEXT_PUBLIC_API_URL`. See `frontend/.env.example`.
 
+## Post-deploy checklist (run through this before showing anyone)
+
+1. Backend `/api/health` returns ok on the Render URL.
+2. On Render, these are set: `CORS_ORIGIN` (= Vercel URL), `PRAMAAN_DEMO_SEED`
+   (any fixed random string), `GEMINI_API_KEYS` (for AI risk + deepfake vision),
+   `ADMIN_API_KEY`, and `TELEGRAM_BOT_TOKEN` if you want the bot.
+3. On Vercel, `NEXT_PUBLIC_API_URL` points at the Render URL and the site loads
+   without CORS errors in the browser console.
+4. Seed: `/issuer` -> initialise demo registry (re-do this after any restart -
+   the free instance's disk is ephemeral).
+5. Verify a genuine sample -> Original; the built-in forged-QR sample -> Altered
+   (names the payee); upload a real AI image -> synthetic detected.
+6. Verify a PDF (the built-in forged-QR PDF) works - confirms PDF rendering runs
+   in the container.
+7. Wake the instance a few minutes before any live demo (free tier sleeps when
+   idle, ~30-50 s cold start).
+
 ## Notes
 
 - The prototype uses a JSON file store; a free instance's disk is ephemeral, so

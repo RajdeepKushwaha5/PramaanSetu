@@ -1,0 +1,23 @@
+# Keep the build context clean and safe. Without this, `COPY . .` bakes local
+# secrets, host node_modules (wrong OS), and personal demo data into the image.
+
+# Secrets - never ship these in an image layer.
+.env
+.env.*
+!.env.example
+
+# Host dependencies / build output - reinstalled and rebuilt inside the image.
+node_modules
+dist
+
+# Runtime state - the container generates these fresh (demo keys from
+# PRAMAAN_DEMO_SEED, a matching trust directory, and an empty store to seed).
+data
+trusted-issuers.json
+
+# VCS / editor / logs.
+.git
+.gitignore
+*.log
+npm-debug.log*
+.DS_Store
