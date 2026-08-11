@@ -32,7 +32,11 @@ function bandsOf(sig: bigint): number[] {
 class FingerprintIndex {
   // One bucket map per band: key = `${band}:${value}` -> set of asset ids.
   private buckets = new Map<string, Set<string>>();
-  private builtForCount = -1;
+  // Identity token of the asset set the index was built from. Count alone is not
+  // enough: a demo reset re-seeds the SAME number of assets with NEW ids, which
+  // would leave the index pointing at dead ids (zero candidates -> everything
+  // reads "unverified"). Including the first/last ids catches a same-count swap.
+  private builtForKey = "";
 
   private add(assetId: string, fingerprint: string): void {
     const bands = bandsOf(coarseSignature(fingerprint));
@@ -47,14 +51,15 @@ class FingerprintIndex {
     }
   }
 
-  /** Rebuild the index if the asset set has changed. */
+  /** Rebuild the index if the asset set has changed (count OR identity). */
   private ensureBuilt(assets: SignedAsset[]): void {
-    if (this.builtForCount === assets.length) return;
+    const key = `${assets.length}:${assets[0]?.id ?? ""}:${assets[assets.length - 1]?.id ?? ""}`;
+    if (this.builtForKey === key) return;
     this.buckets.clear();
     for (const a of assets) {
       for (const fp of a.perceptualHashes) this.add(a.id, fp);
     }
-    this.builtForCount = assets.length;
+    this.builtForKey = key;
   }
 
   /**

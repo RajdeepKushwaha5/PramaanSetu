@@ -57,3 +57,6 @@ backend/trusted-issuers.json
 
 # Local demo sample files (regenerable from the seed endpoint)
 demo-samples/
+
+# Separate pitch-deck sub-project (own node_modules + a large chrome-profile scratch)
+pitch-deck/
