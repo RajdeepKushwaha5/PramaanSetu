@@ -3816,6 +3816,12 @@ button.toplist-row.active {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+.chain-step p.chain-hash {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  line-height: 1.5;
+  word-break: break-all;
+}
 .chain-step.bad p {
   color: var(--red);
 }

@@ -582,9 +582,9 @@ function TrustChain({ result }: { result: VerifyResult }) {
   const status = m.revoked ? "revoked" : m.expired ? "expired" : "active";
   const links = [
     { label: "issuer identity", value: `${m.issuerName} · ${m.sebiRegNo}`, ok: true },
-    { label: "content hash", value: `SHA–256 · ${(result.contentHash ?? "").slice(0, 16)}…`, ok: true },
+    { label: "content hash", value: `SHA–256 · ${result.contentHash ?? "-"}`, ok: true, mono: true },
     { label: "issuer signature", value: m.signatureValid ? "Ed25519 · valid" : "Ed25519 · NOT valid", ok: m.signatureValid },
-    { label: "transparency log", value: m.logIntegrityValid === false ? "INTEGRITY FAILED" : m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "-", ok: m.logIntegrityValid !== false },
+    { label: "transparency log", value: m.logIntegrityValid === false ? "INTEGRITY FAILED" : m.logSeq != null ? `entry #${m.logSeq} · ${m.logEntryHash ?? "-"}` : "-", ok: m.logIntegrityValid !== false, mono: true },
     { label: "record status", value: status, ok: status === "active" },
     { label: "evidence", value: "tamper-evident registry", ok: true },
   ];
@@ -601,7 +601,7 @@ function TrustChain({ result }: { result: VerifyResult }) {
             <span className="chain-mark">{l.ok ? "✓" : "✗"}</span>
             <div>
               <strong>{l.label}</strong>
-              <p>{l.value}</p>
+              <p className={l.mono ? "chain-hash" : undefined}>{l.value}</p>
             </div>
           </div>
         ))}
