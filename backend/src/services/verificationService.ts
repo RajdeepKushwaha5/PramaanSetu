@@ -27,7 +27,7 @@ import {
 } from "../fingerprint/index.js";
 import { decodeQr, extractUpiPayee } from "../fingerprint/qr.js";
 import { getFingerprintIndex } from "../fingerprint/fpIndex.js";
-import { renderPdfFirstPage, renderPdfPages } from "../fingerprint/pdf.js";
+import { renderPdfFirstPage, renderPdfPagesDetailed, MAX_PDF_PAGES } from "../fingerprint/pdf.js";
 import { assessRisk, type RiskAssessment } from "../ai/riskEngine.js";
 import { detectSynthetic } from "../detect/detectionService.js";
 import type { SyntheticAssessment } from "../detect/types.js";
@@ -225,46 +225,89 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
         let effectiveDist = best.dist;
         let worstPage = 0;
         let pdfPages: Buffer[] | null = null;
+        // The per-position page logic applies only when the MATCHED asset is a
+        // PDF. A PDF probe can also match a non-PDF asset (the demo circular is
+        // signed as both a PNG and a PDF); in that case we still render the pages
+        // so the QR scan below runs, but keep the flattened distance.
+        const matchedPdf = mediaType === "pdf" && best.asset.mediaType === "pdf";
         if (mediaType === "pdf") {
-          pdfPages = await renderPdfPages(contentBuf);
           const refPages = best.asset.pageHashes;
-          if (refPages && refPages.length > 0) {
-            if (pdfPages.length !== refPages.length) {
-              record({
-                verdict: "altered",
-                mediaType,
-                contentHash,
-                asset: best.asset,
-                tamperType: "pdf_page_count",
-              });
-              return {
-                verdict: "altered",
-                mediaType,
-                match: {
-                  ...publicMatch(best.asset, best.dist, originalSigValid),
-                  differences: [
-                    `The signed document has ${refPages.length} page(s) but the submitted file has ${pdfPages.length}.`,
-                    "Pages have been added, removed, or reordered. Do not trust it.",
-                  ],
-                },
-                message: `WARNING: This resembles a ${issuerName} document but its page count was changed (signed ${refPages.length}, submitted ${pdfPages.length}). Do not trust it.`,
-                contentHash,
-              };
-            }
-            // Worst-changed page decides the verdict, so an unchanged page can
-            // never mask a tampered one. The QR scan below runs first, so a
-            // swapped payment QR is still reported specifically (named payee).
-            const probePages = await Promise.all(pdfPages.map((p) => imageFingerprint(p)));
-            let worst = 0;
-            for (let i = 0; i < refPages.length; i++) {
-              const d = bestChangedCells([probePages[i]], refPages[i]);
-              if (d > worst) {
-                worst = d;
-                worstPage = i;
-              }
-            }
-            effectiveDist = worst;
+          const rendered = await renderPdfPagesDetailed(contentBuf);
+          pdfPages = rendered.pages;
+          if (matchedPdf) {
+          // Fail closed: a PDF record without per-page fingerprints (e.g. signed
+          // before page-level verification existed) can't be checked page-by-page,
+          // so we must NOT grant a genuine verdict from the flattened pool.
+          if (!refPages || refPages.length === 0) {
+            record({ verdict: "altered", mediaType, contentHash, asset: best.asset, tamperType: "pdf_no_page_hashes" });
+            return {
+              verdict: "altered",
+              mediaType,
+              match: {
+                ...publicMatch(best.asset, best.dist, originalSigValid),
+                differences: [
+                  "This resembles a signed document, but its registry record predates page-level verification.",
+                  "It cannot be integrity-checked page by page. Re-verify against the official source.",
+                ],
+              },
+              message: `WARNING: This resembles a ${issuerName} document but cannot be fully integrity-checked (no page-level record). Do not act on it without checking the official source.`,
+              contentHash,
+            };
           }
+
+          // Over the page limit: we can't fingerprint every page, so a genuine
+          // signed doc (which was rejected at signing if over-limit) can never be
+          // this large. Treat as altered rather than compare a partial prefix.
+          if (rendered.truncated) {
+            record({ verdict: "altered", mediaType, contentHash, asset: best.asset, tamperType: "pdf_over_limit" });
+            return {
+              verdict: "altered",
+              mediaType,
+              match: {
+                ...publicMatch(best.asset, best.dist, originalSigValid),
+                differences: [
+                  `The submitted file has ${rendered.numPages} pages, beyond the ${MAX_PDF_PAGES}-page limit we can fully verify.`,
+                  "No genuine signed document exceeds this limit. Do not trust it.",
+                ],
+              },
+              message: `WARNING: This ${rendered.numPages}-page file exceeds the ${MAX_PDF_PAGES}-page verification limit and cannot be a genuine signed document. Do not trust it.`,
+              contentHash,
+            };
+          }
+          // Compare the ACTUAL page counts (not just rendered pages): a signed
+          // doc has pageCount pages; anything else means a page was added/removed.
+          const signedCount = best.asset.pageCount ?? refPages.length;
+          if (rendered.numPages !== signedCount) {
+            record({ verdict: "altered", mediaType, contentHash, asset: best.asset, tamperType: "pdf_page_count" });
+            return {
+              verdict: "altered",
+              mediaType,
+              match: {
+                ...publicMatch(best.asset, best.dist, originalSigValid),
+                differences: [
+                  `The signed document has ${signedCount} page(s) but the submitted file has ${rendered.numPages}.`,
+                  "Pages have been added, removed, or reordered. Do not trust it.",
+                ],
+              },
+              message: `WARNING: This resembles a ${issuerName} document but its page count was changed (signed ${signedCount}, submitted ${rendered.numPages}). Do not trust it.`,
+              contentHash,
+            };
+          }
+          // Worst-changed page decides the verdict, so an unchanged page can
+          // never mask a tampered one. The QR scan below runs first, so a
+          // swapped payment QR is still reported specifically (named payee).
+          const probePages = await Promise.all(pdfPages.map((p) => imageFingerprint(p)));
+          let worst = 0;
+          const n = Math.min(refPages.length, probePages.length);
+          for (let i = 0; i < n; i++) {
+            const d = bestChangedCells([probePages[i]], refPages[i]);
+            if (d > worst) {
+              worst = d;
+              worstPage = i;
+            }
+          }
+          effectiveDist = worst;
+          } // end matchedPdf
         }
 
         // Audio-replacement (voice-clone) check: if the video frames match a
@@ -304,11 +347,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
         // For PDFs, scan EVERY page (a fraud QR may sit on any page), reusing the
         // pages already rendered above.
         const qrBuffers: Buffer[] =
-          mediaType === "image"
-            ? [contentBuf]
-            : mediaType === "pdf"
-              ? (pdfPages ?? (await renderPdfPages(contentBuf)))
-              : [];
+          mediaType === "image" ? [contentBuf] : mediaType === "pdf" ? (pdfPages ?? []) : [];
         const approved = best.asset.manifest.approvedPaymentHandles;
         for (let p = 0; p < qrBuffers.length; p++) {
           const qrText = await decodeQr(qrBuffers[p]);
@@ -353,7 +392,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
         }
 
         // PDF page edit (not a QR swap): name the tampered page.
-        if (mediaType === "pdf") {
+        if (matchedPdf) {
           record({
             verdict: "altered",
             mediaType,

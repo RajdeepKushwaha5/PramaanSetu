@@ -40,8 +40,29 @@ async function renderPage(page: PdfPage, scale = 2): Promise<Buffer> {
   return canvas.toBuffer("image/png");
 }
 
-/** Render up to `maxPages` pages of a PDF to PNG buffers. */
-export async function renderPdfPages(buffer: Buffer, maxPages = 4): Promise<Buffer[]> {
+/**
+ * Safe upper bound on how many pages we will rasterise and fingerprint. Every
+ * page up to this limit is checked; a document with MORE pages is rejected at
+ * signing and flagged at verification, so pages are never silently ignored.
+ */
+export const MAX_PDF_PAGES = 20;
+
+export interface PdfRender {
+  numPages: number; // the document's ACTUAL page count
+  pages: Buffer[]; // rendered PNG pages (length = min(numPages, maxPages))
+  truncated: boolean; // numPages > maxPages: some pages were NOT rendered
+}
+
+/**
+ * Render a PDF's pages to PNGs and report its ACTUAL page count. `truncated` is
+ * true when the document has more pages than `maxPages` - callers must fail
+ * closed rather than compare only the rendered prefix (which would let a tamper
+ * on an unrendered page slip through).
+ */
+export async function renderPdfPagesDetailed(
+  buffer: Buffer,
+  maxPages = MAX_PDF_PAGES,
+): Promise<PdfRender> {
   try {
     const lib = await loadPdfjs();
     const doc = await lib.getDocument({
@@ -49,16 +70,22 @@ export async function renderPdfPages(buffer: Buffer, maxPages = 4): Promise<Buff
       disableWorker: true,
       isEvalSupported: false,
     }).promise;
+    const numPages = doc.numPages;
+    const count = Math.min(numPages, maxPages);
     const pages: Buffer[] = [];
-    const count = Math.min(doc.numPages, maxPages);
     for (let i = 1; i <= count; i++) {
       pages.push(await renderPage(await doc.getPage(i)));
     }
-    return pages;
+    return { numPages, pages, truncated: numPages > maxPages };
   } catch (e) {
     console.error("PDF render failed:", (e as Error).message);
-    return [];
+    return { numPages: 0, pages: [], truncated: false };
   }
+}
+
+/** Render pages of a PDF to PNG buffers (every page up to {@link MAX_PDF_PAGES}). */
+export async function renderPdfPages(buffer: Buffer, maxPages = MAX_PDF_PAGES): Promise<Buffer[]> {
+  return (await renderPdfPagesDetailed(buffer, maxPages)).pages;
 }
 
 /** Render just the first page (used for QR extraction). */

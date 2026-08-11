@@ -9,6 +9,14 @@
  */
 
 import { verifyAndFormat } from "./verifyReply.js";
+import { MAX_UPLOAD_BYTES, UPLOAD_TOO_LARGE_MESSAGE } from "../util/media.js";
+
+/** Thrown when a Telegram upload exceeds the same limit the HTTP API enforces. */
+class UploadTooLargeError extends Error {
+  constructor() {
+    super(UPLOAD_TOO_LARGE_MESSAGE);
+  }
+}
 
 const WELCOME =
   "🛡️ <b>PramaanSetu Verifier</b>\n\n" +
@@ -21,6 +29,7 @@ const WELCOME =
 interface TgFile {
   file_id: string;
   mime_type?: string;
+  file_size?: number;
 }
 interface TgMessage {
   chat: { id: number };
@@ -48,16 +57,23 @@ async function callApi<T>(token: string, method: string, body: unknown): Promise
   return (await res.json()) as T;
 }
 
-async function downloadFile(token: string, fileId: string): Promise<Buffer> {
-  const info = await callApi<{ ok: boolean; result?: { file_path?: string } }>(
+async function downloadFile(token: string, file: TgFile): Promise<Buffer> {
+  // Reject before downloading when Telegram already tells us the size - the bot
+  // path must honour the same upload cap as the HTTP API (it calls verification
+  // directly, bypassing Express's body limit).
+  if (file.file_size && file.file_size > MAX_UPLOAD_BYTES) throw new UploadTooLargeError();
+  const info = await callApi<{ ok: boolean; result?: { file_path?: string; file_size?: number } }>(
     token,
     "getFile",
-    { file_id: fileId },
+    { file_id: file.file_id },
   );
   const path = info.result?.file_path;
   if (!path) throw new Error("could not resolve file path");
+  if (info.result?.file_size && info.result.file_size > MAX_UPLOAD_BYTES) throw new UploadTooLargeError();
   const res = await fetch(`https://api.telegram.org/file/bot${token}/${path}`);
-  return Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > MAX_UPLOAD_BYTES) throw new UploadTooLargeError();
+  return buf;
 }
 
 async function sendMessage(token: string, chatId: number, text: string): Promise<void> {
@@ -72,18 +88,25 @@ async function handleMessage(token: string, msg: TgMessage): Promise<void> {
   }
 
   let reply: string | null = null;
-  if (msg.photo && msg.photo.length > 0) {
-    const largest = msg.photo[msg.photo.length - 1];
-    reply = await verifyAndFormat({ bytes: await downloadFile(token, largest.file_id), mimeType: "image/jpeg" });
-  } else if (msg.video) {
-    reply = await verifyAndFormat({ bytes: await downloadFile(token, msg.video.file_id), mimeType: msg.video.mime_type ?? "video/mp4" });
-  } else if (msg.voice || msg.audio) {
-    const a = msg.voice ?? msg.audio!;
-    reply = await verifyAndFormat({ bytes: await downloadFile(token, a.file_id), mimeType: a.mime_type ?? "audio/ogg" });
-  } else if (msg.document) {
-    reply = await verifyAndFormat({ bytes: await downloadFile(token, msg.document.file_id), mimeType: msg.document.mime_type ?? "application/octet-stream" });
-  } else if (msg.caption || msg.text) {
-    reply = await verifyAndFormat({ text: msg.caption ?? msg.text });
+  try {
+    if (msg.photo && msg.photo.length > 0) {
+      const largest = msg.photo[msg.photo.length - 1];
+      reply = await verifyAndFormat({ bytes: await downloadFile(token, largest), mimeType: "image/jpeg" });
+    } else if (msg.video) {
+      reply = await verifyAndFormat({ bytes: await downloadFile(token, msg.video), mimeType: msg.video.mime_type ?? "video/mp4" });
+    } else if (msg.voice || msg.audio) {
+      const a = msg.voice ?? msg.audio!;
+      reply = await verifyAndFormat({ bytes: await downloadFile(token, a), mimeType: a.mime_type ?? "audio/ogg" });
+    } else if (msg.document) {
+      reply = await verifyAndFormat({ bytes: await downloadFile(token, msg.document), mimeType: msg.document.mime_type ?? "application/octet-stream" });
+    } else if (msg.caption || msg.text) {
+      reply = await verifyAndFormat({ text: msg.caption ?? msg.text });
+    }
+  } catch (e) {
+    reply =
+      e instanceof UploadTooLargeError
+        ? `⚠️ ${UPLOAD_TOO_LARGE_MESSAGE} Please send a smaller file.`
+        : "Sorry, I couldn't process that file. Please try again with a message, image, PDF, or video.";
   }
 
   await sendMessage(

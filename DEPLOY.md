@@ -60,6 +60,18 @@ so verification and the dashboard have data.
 `ADMIN_API_KEY`, `DEMO_MODE`, `FFMPEG_PATH` (`ffmpeg` in Docker), `NODE_ENV`
 (`production`). See `backend/.env.example`.
 
+**Demo keys and trust directory** (backend):
+
+- `PRAMAAN_DEMO_KEYS` - path to the gitignored file holding the demo issuer
+  private keys (default `backend/data/demo-issuer-keys.json`).
+- `PRAMAAN_TRUST_DIR` - path to the published trusted-issuer directory of PUBLIC
+  keys the verifier anchors against (default `backend/trusted-issuers.json`).
+- `PRAMAAN_DEMO_SEED` - optional. When set, the demo keys are derived
+  deterministically from this seed, so a restart on an ephemeral disk regenerates
+  the SAME keys and any proof bundle a judge already downloaded keeps verifying.
+  Set this on any hosted demo. Without it, keys are random and persisted to
+  `PRAMAAN_DEMO_KEYS` (fine for local dev, lost on an ephemeral-disk restart).
+
 **Frontend** (Vercel): `NEXT_PUBLIC_API_URL`. See `frontend/.env.example`.
 
 ## Notes
@@ -67,6 +79,11 @@ so verification and the dashboard have data.
 - The prototype uses a JSON file store; a free instance's disk is ephemeral, so
   re-seed after a restart. For persistence, mount a disk or move to the
   PostgreSQL path in the README's *Path to production*.
+- Because the demo trust directory is generated locally, the standalone verifier
+  (`npm run verify:record`) must run against the directory from the SAME instance
+  that produced the proof bundle. Set `PRAMAAN_DEMO_SEED` (above) so restarts do
+  not change the keys, or run the verifier from the same checkout. Judges verify
+  live during the demo, where the directory and bundle already match.
 - Detection metrics compute on first request to `/api/detection/metrics`
   (deterministic, forensic-only) and are cached.
 - The Telegram bot activates only if `TELEGRAM_BOT_TOKEN` is set.

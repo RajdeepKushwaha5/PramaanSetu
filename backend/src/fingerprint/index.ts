@@ -1,7 +1,7 @@
 import type { MediaType } from "../db/types.js";
 import { imageFingerprint, robustImageFingerprints } from "./imageHash.js";
 import { videoFrameHashes } from "./videoHash.js";
-import { renderPdfPages } from "./pdf.js";
+import { renderPdfPages, renderPdfPagesDetailed } from "./pdf.js";
 
 export { sha256 } from "./contentHash.js";
 export {
@@ -14,7 +14,8 @@ export {
   GRID_SIZE,
 } from "./imageHash.js";
 export { isFfmpegAvailable, videoFrameHashes } from "./videoHash.js";
-export { renderPdfPages, renderPdfFirstPage } from "./pdf.js";
+export { renderPdfPages, renderPdfPagesDetailed, renderPdfFirstPage, MAX_PDF_PAGES } from "./pdf.js";
+export type { PdfRender } from "./pdf.js";
 export { audioFingerprint, audioChangedCells, AUDIO_SAME_MAX } from "./audioHash.js";
 
 /**
@@ -67,19 +68,28 @@ export async function computePerceptualHashes(
   return [];
 }
 
+export interface PdfSigningPages {
+  pageCount: number; // the document's ACTUAL page count
+  pageHashes: string[][]; // one geometry-robust fingerprint SET per rendered page
+  truncated: boolean; // document has more pages than MAX_PDF_PAGES
+}
+
 /**
- * Per-page PDF fingerprints for SIGNING. Returns one geometry-robust fingerprint
- * SET per page, in page order, so verification can compare pages by position
- * (page 1 vs page 1, page 2 vs page 2) instead of flattening every page into one
- * pool - which would let an unchanged page mask a tampered one.
+ * Per-page PDF fingerprints for SIGNING, plus the ACTUAL page count. Returns one
+ * geometry-robust fingerprint SET per page, in page order, so verification can
+ * compare pages by position (page 1 vs page 1, ...) instead of flattening every
+ * page into one pool - which would let an unchanged page mask a tampered one.
+ * `truncated` lets the caller refuse to sign documents whose pages can't all be
+ * fingerprinted, rather than silently ignoring the overflow pages.
  */
-export async function computePdfPageFingerprints(buffer: Buffer): Promise<string[][]> {
+export async function computePdfSigningPages(buffer: Buffer): Promise<PdfSigningPages> {
   try {
-    const pages = await renderPdfPages(buffer);
-    return await Promise.all(pages.map((p) => robustImageFingerprints(p)));
+    const { numPages, pages, truncated } = await renderPdfPagesDetailed(buffer);
+    const pageHashes = await Promise.all(pages.map((p) => robustImageFingerprints(p)));
+    return { pageCount: numPages, pageHashes, truncated };
   } catch (e) {
     console.error("pdf page fingerprint failed:", e);
-    return [];
+    return { pageCount: 0, pageHashes: [], truncated: false };
   }
 }
 

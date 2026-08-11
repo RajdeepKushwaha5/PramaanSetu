@@ -8,7 +8,13 @@
  * and signed by a regulator-controlled root. Here they are clearly simulated.
  */
 
-import { createHash, generateKeyPairSync } from "node:crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  generateKeyPairSync,
+  hkdfSync,
+} from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,14 +40,43 @@ export interface DemoKey {
   privateKey: string;
 }
 
+// PKCS8 DER prefix for a raw 32-byte Ed25519 private seed.
+const ED25519_PKCS8_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
+
+/**
+ * Derive an Ed25519 keypair deterministically from a master seed + issuer id.
+ * Used only when PRAMAAN_DEMO_SEED is set, so an ephemeral-disk restart (e.g. on
+ * a free Render instance) regenerates the SAME demo keys and previously issued
+ * proof bundles keep verifying. Without the seed we fall back to random keys
+ * persisted in a gitignored file (the local-dev default).
+ */
+function deterministicKey(masterSeed: string, regNo: string): DemoKey {
+  const raw = Buffer.from(
+    hkdfSync("sha256", Buffer.from(masterSeed, "utf8"), Buffer.from(regNo, "utf8"), "pramaansetu-ed25519", 32),
+  );
+  const priv = createPrivateKey({ key: Buffer.concat([ED25519_PKCS8_PREFIX, raw]), format: "der", type: "pkcs8" });
+  const pub = createPublicKey(priv);
+  return {
+    publicKey: pub.export({ type: "spki", format: "der" }).toString("base64"),
+    privateKey: priv.export({ type: "pkcs8", format: "der" }).toString("base64"),
+  };
+}
+
 /**
  * Load (or generate on first use) the demo issuer keypairs, and always (re)write
  * the trusted-issuer directory with the matching PUBLIC keys. Returns the
  * keypairs keyed by SEBI registration number.
  */
 export function ensureDemoIssuerKeys(): Record<string, DemoKey> {
+  const seed = process.env.PRAMAAN_DEMO_SEED?.trim();
   let keys: Record<string, DemoKey>;
-  if (existsSync(KEYS_PATH)) {
+  if (seed) {
+    // Deterministic: same seed -> same keys on every (re)start, no disk needed.
+    keys = {};
+    for (const it of ISSUERS) keys[it.sebiRegNo] = deterministicKey(seed, it.sebiRegNo);
+    mkdirSync(dirname(KEYS_PATH), { recursive: true });
+    writeFileSync(KEYS_PATH, JSON.stringify(keys, null, 2));
+  } else if (existsSync(KEYS_PATH)) {
     keys = JSON.parse(readFileSync(KEYS_PATH, "utf8")) as Record<string, DemoKey>;
   } else {
     keys = {};

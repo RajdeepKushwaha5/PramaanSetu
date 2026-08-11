@@ -70,6 +70,7 @@ export interface SignedAsset {
   contentHash: string;
   perceptualHashes: string[]; // image: 1 hash; video: per-keyframe hashes
   pageHashes?: string[][]; // pdf: per-page fingerprint sets, so pages are compared by position (not flattened)
+  pageCount?: number; // pdf: the document's ACTUAL page count, compared at verification to catch added/removed pages
   audioFingerprint?: string; // video/audio: spectrogram signature of the audio track
   manifest: Manifest;
   signature: string; // base64 Ed25519 over canonical manifest JSON

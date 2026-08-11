@@ -6,10 +6,11 @@ import { signManifest } from "../crypto/signing.js";
 import {
   audioFingerprint,
   computeSigningFingerprints,
-  computePdfPageFingerprints,
+  computePdfSigningPages,
   extFromMime,
   mediaTypeFromMime,
   sha256,
+  MAX_PDF_PAGES,
 } from "../fingerprint/index.js";
 
 export interface SignInput {
@@ -45,11 +46,21 @@ export async function signContent(input: SignInput): Promise<SignResult> {
   // For PDFs, keep per-page fingerprints so verification compares pages by
   // position; the flattened list is retained for the LSH candidate index.
   let pageHashes: string[][] | undefined;
+  let pageCount: number | undefined;
   let perceptualHashes: string[];
   if (mediaType === "text") {
     perceptualHashes = [];
   } else if (mediaType === "pdf") {
-    pageHashes = await computePdfPageFingerprints(contentBuf);
+    const sp = await computePdfSigningPages(contentBuf);
+    // Fail closed: never sign a document we cannot fully fingerprint, otherwise a
+    // tamper on an unrendered page would be invisible at verification.
+    if (sp.truncated) {
+      throw new Error(
+        `This PDF has ${sp.pageCount} pages, which exceeds the ${MAX_PDF_PAGES}-page limit for full page-level verification. Split the document or raise MAX_PDF_PAGES.`,
+      );
+    }
+    pageHashes = sp.pageHashes;
+    pageCount = sp.pageCount;
     perceptualHashes = pageHashes.flat();
   } else {
     perceptualHashes = await computeSigningFingerprints(contentBuf, mediaType, input.mimeType);
@@ -92,6 +103,7 @@ export async function signContent(input: SignInput): Promise<SignResult> {
     contentHash,
     perceptualHashes,
     pageHashes,
+    pageCount,
     audioFingerprint: audioFp,
     manifest,
     signature,

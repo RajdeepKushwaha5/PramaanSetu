@@ -41,9 +41,13 @@ bump) for any high-severity findings — most are safe patch/minor upgrades, as 
 The prototype deliberately keeps setup simple; the production hardening is
 well-understood and listed in the README's *Path to production* table. In short:
 
-- **Keys:** issuer private keys and the evidence-signing key live in the local
-  JSON store for the demo. Production moves them to an HSM/KMS; the app stores
-  only key ids, public keys, and status.
+- **Keys:** demo issuer private keys are generated at runtime into a gitignored
+  file (`backend/data/demo-issuer-keys.json`, or `PRAMAAN_DEMO_KEYS`), never
+  committed; the matching public keys are published to a local trusted-issuer
+  directory (`backend/trusted-issuers.json`, or `PRAMAAN_TRUST_DIR`). The
+  evidence-signing key lives in the local JSON store for the demo. Production
+  moves all private keys to an HSM/KMS; the directory stores only key ids, public
+  keys, and status.
 - **Identity:** demo issuers are pre-approved records. Production validates
   issuer identity against SEBI / exchange registries.
 - **Transparency log:** an internal hash chain today; production publishes log

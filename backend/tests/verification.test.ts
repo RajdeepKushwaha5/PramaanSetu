@@ -274,15 +274,20 @@ function fillBox(img: InstanceType<typeof JimpLib>, x0: number, y0: number, x1: 
     }
 }
 
-/** Deterministic 480x320 page. `variant` changes the visible content a lot. */
+/**
+ * Deterministic 480x320 page. Each `variant` (0..29) places two distinctive
+ * blocks at a unique (row, column) position, so different variants produce
+ * clearly different fingerprints and no two documents share a page by accident.
+ */
 async function pageImage(variant: number, qrPayload?: string): Promise<Buffer> {
   const img = new JimpLib({ width: 480, height: 320, color: 0xffffffff });
   fillBox(img, 0, 0, 480, 56, [11, 37, 69]);
-  for (let i = 0; i < 6; i++) {
-    const y = 90 + i * 26;
-    const width = 260 - ((i + variant) % 3) * 60;
-    fillBox(img, 30, y, 30 + width, y + 12, [70 + variant * 40, 100, 130]);
-  }
+  const row = variant % 6; // 0..5
+  const col = Math.floor(variant / 6); // 0..4 for variants 0..29
+  const y = 70 + row * 22;
+  fillBox(img, 30, y, 450, y + 40, [200, 40, 40]);
+  const x = 20 + col * 60;
+  fillBox(img, x, 200, x + 80, 300, [40, 80, 200]);
   if (qrPayload) {
     const qrPng = await QR.toBuffer(qrPayload, { width: 96, margin: 1 });
     const qr = await JimpLib.read(qrPng);
@@ -355,6 +360,41 @@ test("multi-page PDF: swapped QR on a non-first page -> altered, names payee", a
   const r = await verifyContent({ mimeType: "application/pdf", bytes: tampered });
   assert.equal(r.verdict, "altered");
   assert.equal(r.match?.paymentTamper?.foundPayee, "scam99@ybl");
+});
+
+const { MAX_PDF_PAGES } = await import("../src/fingerprint/index.js");
+
+test("PDF beyond 4 pages: a tamper on page 5 is caught (regression for the 4-page cap)", async () => {
+  // Five pages - the old renderer capped at 4, so a page-5 edit was invisible.
+  // Use distinct variants (10..14) so this document does not share a pixel-
+  // identical page with any other signed fixture.
+  const pages = await Promise.all([10, 11, 12, 13, 14].map((v, i) => pageImage(v, i === 0 ? APPROVED : undefined)));
+  const signed = await buildPdf(pages);
+  await signContent({ issuerId, title: "SEBI 5-page circular", mimeType: "application/pdf", bytes: signed });
+
+  // Genuine copy -> original.
+  assert.equal((await verifyContent({ mimeType: "application/pdf", bytes: signed })).verdict, "original");
+
+  // Change ONLY page 5. Must be altered and name page 5, not "derivative".
+  const edited = [...pages];
+  edited[4] = await pageImage(19);
+  const r = await verifyContent({ mimeType: "application/pdf", bytes: await buildPdf(edited) });
+  assert.equal(r.verdict, "altered");
+  assert.ok(
+    r.match?.differences?.some((d) => /page 5/i.test(d)),
+    `expected a page-5 difference, got: ${JSON.stringify(r.match?.differences)}`,
+  );
+});
+
+test("PDF over the page limit is rejected at signing (fails closed)", async () => {
+  const many = await Promise.all(
+    Array.from({ length: MAX_PDF_PAGES + 1 }, (_v, i) => pageImage(i % 3)),
+  );
+  const tooBig = await buildPdf(many);
+  await assert.rejects(
+    signContent({ issuerId, title: "Oversized PDF", mimeType: "application/pdf", bytes: tooBig }),
+    /exceeds the .* limit/i,
+  );
 });
 
 // ---- video + audio (voice-clone) tests; skip if FFmpeg is unavailable ----

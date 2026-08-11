@@ -657,7 +657,7 @@ The prototype proves the *idea and the mechanism*; production must prove the
 | Prototype today | Production |
 | --- | --- |
 | Issuer identity is a pre-approved demo record | Validate identity against authoritative SEBI / exchange registries; issuer onboarding + approval |
-| Private keys stored in the local JSON store | Keys held in HSM / KMS; the app stores only key ids, public keys, and status |
+| Demo private keys generated at runtime into a gitignored file (never committed); public keys published to a local trusted-issuer directory | Keys held in HSM / KMS; the directory is published and signed by a regulator-controlled root, with key ids, public keys, status, expiry and rotation history |
 | Evidence signed by a locally-generated key | Anchor evidence to a regulator-controlled key / certificate chain |
 | Hash-chain transparency log (internal) | Publish log roots as a Merkle tree for independent, third-party verification |
 | JSON file store + in-memory LSH index | PostgreSQL + pgvector / FAISS, object storage, worker queues, Redis |
@@ -669,7 +669,9 @@ signing rail, verdict engine, campaign graph, and evidence flow stay as they are
 
 ### Already built (beyond the original plan)
 
-Image, PDF (page rendering + QR extraction), and video (frame fingerprinting)
+Image, PDF (every page fingerprinted and compared by position, with QR
+extraction on each page, up to a 20-page limit; longer documents are rejected at
+signing rather than partially checked), and video (frame fingerprinting)
 verification; audio provenance (recompressed copy of a signed recording -> a
 derivative) and voice-clone / audio-replacement detection on matched videos;
 **synthetic-media detection** (deepfake image/video and synthetic-voice scoring
