@@ -26,6 +26,7 @@ interface Stats {
   topPaymentHandles: Count[];
   topPhoneNumbers: Count[];
   topImpersonatedEntities: Count[];
+  topDomains: Count[];
   logIntegrity: { valid: boolean; brokenAt: number | null; reason: string | null };
 }
 interface Campaign {
@@ -44,9 +45,16 @@ interface Campaign {
   lastSeen?: string;
 }
 
-type FilterType = "upi" | "phone" | "entity";
+type FilterType = "upi" | "phone" | "entity" | "domain";
 interface Filter { type: FilterType; value: string }
-type ActiveNav = "campaigns" | "upi" | "entities" | "phone" | "evidence";
+type ActiveNav = "campaigns" | "upi" | "entities" | "phone" | "domains" | "evidence";
+
+const FILTER_LABEL: Record<FilterType, string> = {
+  upi: "UPI handle",
+  phone: "phone",
+  entity: "entity",
+  domain: "domain",
+};
 
 async function downloadJson(path: string, filename: string) {
   const response = await fetch(apiUrl(path));
@@ -63,6 +71,16 @@ async function downloadJson(path: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// Wrap a download so a failure is never silent (used by the deep card buttons
+// that aren't wired to the page's inline error box).
+async function safeDownload(path: string, filename: string) {
+  try {
+    await downloadJson(path, filename);
+  } catch {
+    window.alert("Evidence export failed — could not reach the intelligence service. Please try again.");
+  }
+}
+
 export default function DashboardPage() {
   const { role } = useRole();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -76,6 +94,7 @@ export default function DashboardPage() {
   const upiRef = useRef<HTMLDivElement>(null);
   const entitiesRef = useRef<HTMLDivElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
+  const domainRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -127,6 +146,7 @@ export default function DashboardPage() {
     if (!filter) return true;
     if (filter.type === "upi") return c.paymentHandles.includes(filter.value);
     if (filter.type === "phone") return c.phoneNumbers.includes(filter.value);
+    if (filter.type === "domain") return c.domains.includes(filter.value);
     return c.entities.includes(filter.value);
   }
 
@@ -138,6 +158,7 @@ export default function DashboardPage() {
     { id: "upi", icon: "⌁", label: "UPI handles", count: stats?.topPaymentHandles.length ?? 0, ref: upiRef },
     { id: "entities", icon: "◇", label: "Entities", count: stats?.topImpersonatedEntities.length ?? 0, ref: entitiesRef },
     { id: "phone", icon: "◉", label: "Phone graph", count: stats?.topPhoneNumbers.length ?? 0, ref: phoneRef },
+    { id: "domains", icon: "⊕", label: "Domains", count: stats?.topDomains.length ?? 0, ref: domainRef },
     { id: "evidence", icon: "≡", label: "Evidence", count: stats?.totals.totalVerifications ?? 0, ref: campaignsRef },
   ];
 
@@ -242,7 +263,7 @@ export default function DashboardPage() {
           {activeNav === "campaigns" && filter && (
             <div className="filter-banner">
               <span>
-                Filtered by {filter.type === "upi" ? "UPI handle" : filter.type === "phone" ? "phone" : "entity"}:
+                Filtered by {FILTER_LABEL[filter.type]}:
                 {" "}<b>{filter.value}</b>
               </span>
               <button type="button" onClick={() => setFilter(null)}>clear ✕</button>
@@ -289,6 +310,7 @@ export default function DashboardPage() {
           <TopList title="payment handles" code="UPI" items={stats?.topPaymentHandles ?? []} onPick={(v) => applyFilter("upi", v)} filter={filter} type="upi" innerRef={upiRef} />
           <TopList title="phone numbers" code="TEL" items={stats?.topPhoneNumbers ?? []} onPick={(v) => applyFilter("phone", v)} filter={filter} type="phone" innerRef={phoneRef} />
           <TopList title="impersonated entities" code="ENT" items={stats?.topImpersonatedEntities ?? []} onPick={(v) => applyFilter("entity", v)} filter={filter} type="entity" innerRef={entitiesRef} />
+          <TopList title="domains" code="DOM" items={stats?.topDomains ?? []} onPick={(v) => applyFilter("domain", v)} filter={filter} type="domain" innerRef={domainRef} />
           <VerdictList items={stats?.verdictBreakdown ?? {}} />
           <DetectionPanel detection={stats?.detection} />
         </div>
@@ -302,6 +324,7 @@ function consoleTitle(activeNav: ActiveNav, campaignCount: number, stats: Stats 
   if (activeNav === "upi") return `${(stats?.topPaymentHandles.length ?? 0).toString().padStart(2, "0")} / PAYMENT HANDLES`;
   if (activeNav === "entities") return `${(stats?.topImpersonatedEntities.length ?? 0).toString().padStart(2, "0")} / IMPERSONATED ENTITIES`;
   if (activeNav === "phone") return `${(stats?.topPhoneNumbers.length ?? 0).toString().padStart(2, "0")} / PHONE INDICATORS`;
+  if (activeNav === "domains") return `${(stats?.topDomains.length ?? 0).toString().padStart(2, "0")} / DOMAINS`;
   return `${(stats?.totals.totalVerifications ?? 0).toString().padStart(2, "0")} / EVIDENCE EVENTS`;
 }
 
@@ -347,13 +370,22 @@ function ConsoleTab({
     );
   }
 
+  if (activeNav === "domains") {
+    return (
+      <div className="console-tab-panel">
+        <TopList title="domains" code="DOM" items={stats?.topDomains ?? []} onPick={(v) => onPick("domain", v)} filter={filter} type="domain" />
+        <LinkedCampaignPreview title="domain-linked campaigns" campaigns={campaigns.filter((c) => c.domains.length > 0)} />
+      </div>
+    );
+  }
+
   return (
     <div className="console-tab-panel evidence-tab">
       <button
         type="button"
         className="evidence-wide-export"
         disabled={!canExport}
-        onClick={() => void downloadJson("/api/evidence", `pramaansetu-intelligence-${Date.now()}.json`)}
+        onClick={() => void safeDownload("/api/evidence", `pramaansetu-intelligence-${Date.now()}.json`)}
       >
         <span>{canExport ? "EXPORT FULL INTELLIGENCE SNAPSHOT" : "REGULATOR MODE REQUIRED"}</span>
         <strong>JSON</strong>
@@ -379,7 +411,7 @@ function LinkedCampaignPreview({ title, campaigns, evidence, canExport = true }:
           <span>{(i + 1).toString().padStart(2, "0")}</span>
           <strong>{campaign.entities.join(" / ") || `Campaign ${campaign.id}`}</strong>
           {evidence ? (
-            <button type="button" disabled={!canExport} onClick={() => void downloadJson(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}>
+            <button type="button" disabled={!canExport} onClick={() => void safeDownload(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}>
               {canExport ? "export ↗" : "locked"}
             </button>
           ) : (
@@ -426,7 +458,7 @@ function CampaignCard({ campaign, index, onIndicator, filter, canExport = true }
         <div className="campaign-indicators">
           <IndicatorLine label="UPI" values={campaign.paymentHandles} onPick={(v) => onIndicator("upi", v)} filter={filter} type="upi" />
           <IndicatorLine label="PHONE" values={campaign.phoneNumbers} onPick={(v) => onIndicator("phone", v)} filter={filter} type="phone" />
-          <IndicatorLine label="DOMAIN" values={campaign.domains} />
+          <IndicatorLine label="DOMAIN" values={campaign.domains} onPick={(v) => onIndicator("domain", v)} filter={filter} type="domain" />
           <IndicatorLine label="LINKED BY" values={campaign.linkingIndicators} />
         </div>
       </div>
@@ -434,7 +466,7 @@ function CampaignCard({ campaign, index, onIndicator, filter, canExport = true }
         type="button"
         className="campaign-export"
         disabled={!canExport}
-        onClick={() => void downloadJson(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}
+        onClick={() => void safeDownload(`/api/evidence/${campaign.id}`, `pramaansetu-campaign-${campaign.id}.json`)}
       >
         <span>JSON</span>
         {canExport ? <>export<br />evidence</> : <>regulator<br />only</>}

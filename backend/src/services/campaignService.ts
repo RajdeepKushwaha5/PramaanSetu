@@ -268,6 +268,9 @@ export function getDashboardStats() {
     topImpersonatedEntities: topCounts(
       fraud.map((e) => e.impersonatedEntity ?? e.matchedIssuerName).filter((x): x is string => !!x),
     ),
+    topDomains: topCounts(
+      fraud.flatMap((e) => e.urls.map(domainOf).filter((d): d is string => !!d)),
+    ),
     logIntegrity: store.verifyLog(),
   };
 }

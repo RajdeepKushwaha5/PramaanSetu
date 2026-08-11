@@ -9,6 +9,8 @@ type Handoff =
   | { kind: "text"; text: string }
   | { kind: "file"; content: string; mimeType: string; name: string };
 
+const MAX_UPLOAD_MB = 20; // matches the verifier; stays under the 40 MB JSON body
+
 interface Issuer {
   id: string;
   name: string;
@@ -56,6 +58,16 @@ export default function IssuerPage() {
   const [signedPayload, setSignedPayload] = useState<Handoff | null>(null);
   const [revoked, setRevoked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Validate file size before accepting (the signing rail lacked this guard).
+  function pickFile(f: File | null) {
+    setError(null);
+    if (f && f.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB.`);
+      return;
+    }
+    setFile(f);
+  }
 
   // Carry the just-signed content to the verifier so "verify a copy" actually
   // re-verifies it instead of opening an empty form.
@@ -292,7 +304,7 @@ export default function IssuerPage() {
 
               {mode === "file" ? (
                 <label className="compact-upload">
-                  <input type="file" accept="image/*,video/*,audio/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                  <input type="file" accept="image/*,video/*,audio/*,application/pdf" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
                   <span>⌁</span>
                   <div>
                     <strong>{file?.name ?? "select content to bind"}</strong>

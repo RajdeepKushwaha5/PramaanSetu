@@ -91,8 +91,9 @@ const SAMPLES: { id: string; key: string; mime: string; name: string; label: str
   { id: "ga", key: "compressed_m4a_expect_derivative", mime: "audio/mp4", name: "voice-note.m4a", label: "forwarded voice note", tone: "verified" },
 ];
 
-// Client-side upload guard (server also enforces a 30 MB JSON limit).
-const MAX_UPLOAD_MB = 25;
+// Client-side upload guard. Kept below the server's JSON limit accounting for
+// base64 inflation (~1.37x): 20 MB -> ~27 MB encoded, well under the 40 MB body.
+const MAX_UPLOAD_MB = 20;
 const ACCEPTED_PREFIXES = ["image/", "video/", "audio/"];
 const ACCEPTED_EXACT = ["application/pdf"];
 

@@ -599,15 +599,13 @@ JSON database. Production keys should be held in an HSM or KMS. The signing
 flow also needs authenticated issuer accounts, key rotation, audit access
 controls, and constant-time secret comparison.
 
-**Dependency audit.** The backend production dependency audit is clean
-(`npm --prefix backend audit --omit=dev` reports 0 vulnerabilities) — the
-Telegram bot talks to the Bot API directly over `fetch`, avoiding heavy client
-libraries. The frontend reports a high-severity PostCSS advisory that is
-**bundled transitively inside Next.js's own build toolchain**
-(`next/node_modules/postcss`); it affects the build step, not the served
-runtime, and the only offered "fix" downgrades Next.js to v9 (a breaking
-change). It will clear with a future Next.js release rather than a local change.
-See [SECURITY.md](SECURITY.md) for the full advisory-by-advisory breakdown.
+**Dependency audit.** Both dependency trees are clean —
+`npm --prefix backend audit --omit=dev` and `npm --prefix frontend audit` each
+report **0 vulnerabilities**. Earlier high-severity advisories (a `pdfjs-dist`
+PDF issue and `ip-address` on the backend; transitive `postcss` / `sharp` inside
+Next.js on the frontend) were cleared by targeted upgrades — `pdfjs-dist` to
+6.2.x and Next.js to 16.3.x — with no breaking changes. Re-run the audits before
+submission, as advisory feeds change over time. See [SECURITY.md](SECURITY.md).
 
 ## Deployment
 

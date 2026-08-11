@@ -44,6 +44,12 @@ class Store {
     if (on) this.flush();
   }
 
+  /** Wipe all demo data back to an empty store (demo-mode reset only). */
+  reset(): void {
+    this.db = emptyDb();
+    this.flush();
+  }
+
   private load(): DbShape {
     try {
       if (existsSync(DB_PATH)) {

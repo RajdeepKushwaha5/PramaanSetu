@@ -23,7 +23,9 @@ app.use(
     origin: process.env.CORS_ORIGIN?.split(",") ?? true,
   }),
 );
-app.use(express.json({ limit: "30mb" })); // room for base64 image/short video
+// 40mb JSON body: base64 inflates bytes ~1.37x, so this comfortably clears the
+// frontend's 20 MB file cap (~27 MB encoded) with headroom for short video/audio.
+app.use(express.json({ limit: "40mb" }));
 
 // Basic rate limiting to make abuse harder.
 app.use(

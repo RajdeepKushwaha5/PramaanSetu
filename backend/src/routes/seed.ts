@@ -46,6 +46,17 @@ const SEED_ANNOUNCEMENTS = [
   { reg: "INE002A01018", title: "RIL Board Meeting Intimation", text: "Intimation of the board meeting to consider and approve financial results. Official filings are on the exchange portals only.", url: "https://www.ril.com" },
 ];
 
+// Demo reset: wipe the store so a recording can start from a clean state.
+// Gated exactly like seeding (demo mode, or the admin key).
+seedRouter.post("/reset", (req, res) => {
+  if (!env.demoMode && req.header("x-admin-key") !== env.adminApiKey) {
+    res.status(403).json({ error: "Reset is disabled in production without the admin key." });
+    return;
+  }
+  getStore().reset();
+  res.json({ message: "Store reset.", stats: getStore().stats() });
+});
+
 seedRouter.post("/", async (req, res) => {
   // Seeding mints signing identities, so it is gated: allowed in demo mode, or
   // with the admin key. Disabled by default in production.
@@ -171,8 +182,6 @@ seedRouter.post("/", async (req, res) => {
       altered_png_expect_altered: bundle.alteredPng.toString("base64"),
       original_pdf_expect_original: bundle.originalPdf.toString("base64"),
       altered_pdf_expect_altered: bundle.alteredPdf.toString("base64"),
-      synthetic_png_expect_synthetic: bundle.syntheticSample.toString("base64"),
-      authentic_png_expect_authentic: bundle.authenticSample.toString("base64"),
       ...demoVideos,
     },
   });
