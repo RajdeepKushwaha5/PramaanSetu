@@ -175,11 +175,21 @@ imports nothing from PramaanSetu and never calls the backend:
 npm run verify:record -- path/to/pramaansetu-proof-<id>.json
 ```
 
-It recomputes the SHA-256 content hash and verifies the Ed25519 signature with
-only Node's built-in crypto, printing **GENUINE** or **NOT VERIFIED** (and exits
-non-zero on failure). Change one character of the content in the bundle and it
-fails the hash check - proving the verdict isn't something this backend can fake.
-Every issuer's public key is also served at `GET /api/issuers/:id/key`.
+Using only Node's built-in crypto it runs three checks:
+
+1. **Content integrity** - recompute the SHA-256 hash from the actual bytes.
+2. **Issuer signature** - verify the Ed25519 signature over the manifest.
+3. **Identity anchor** - confirm the signing key is the one published for that
+   issuer in an independent trusted-issuer directory
+   (`backend/trusted-issuers.json`).
+
+It prints **GENUINE** only when all three pass. Crucially, a signature alone
+proves "signed by *some* key", not "signed by SEBI" - so an attacker who signs a
+fake notice with their **own** key and labels it SEBI gets
+`SIGNATURE VALID · CONTENT INTACT · IDENTITY NOT TRUST-ANCHORED`, never GENUINE.
+Change one character of the content and it fails the hash check. In production
+the directory would be published and signed by a regulator-controlled root; here
+it pins the demo issuer keys (`GET /api/issuers/:id/key` serves them too).
 
 ## Architecture
 

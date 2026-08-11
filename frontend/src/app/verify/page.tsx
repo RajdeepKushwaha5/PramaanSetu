@@ -60,6 +60,9 @@ interface VerifyResult {
   contentHash?: string;
 }
 
+const TELEGRAM_BOT_HANDLE = process.env.NEXT_PUBLIC_TELEGRAM_BOT ?? "@PramaanSetuBot";
+const TELEGRAM_BOT_URL = `https://t.me/${TELEGRAM_BOT_HANDLE.replace(/^@/, "")}`;
+
 const SAMPLE = `URGENT! SEBI registered advisor here. Join our VIP WhatsApp group for guaranteed 300% returns. Limited seats! Pay Rs 5000 to 9876543210@paytm and start earning. Download our app: bit.ly/trade-win`;
 
 const VERDICT: Record<string, { label: string; code: string; tone: string; note: string }> = {
@@ -306,6 +309,11 @@ export default function VerifyPage() {
             <span className="tag blue">TELEGRAM</span>
             The same verifier runs as a Telegram bot - forward a suspicious message,
             image, or PDF in chat and get the identical verdict, where scams actually spread.
+            {" "}Try it:{" "}
+            <a className="inline-link" href={TELEGRAM_BOT_URL} target="_blank" rel="noreferrer">
+              {TELEGRAM_BOT_HANDLE}
+            </a>
+            {" "}(WhatsApp Business uses the same integration, planned next).
           </p>
         </div>
       </section>

@@ -111,6 +111,22 @@ test("tampered signature -> invalid_provenance, never original", async () => {
   asset.signature = original; // restore
 });
 
+test("pinned issuer keys match the published trust directory", async () => {
+  const { DEMO_ISSUER_KEYS } = await import("../src/config/demoIssuers.js");
+  const { readFileSync } = await import("node:fs");
+  const dir = JSON.parse(readFileSync(join(process.cwd(), "trusted-issuers.json"), "utf8")) as {
+    issuers: { sebiRegNo: string; publicKey: string; status: string }[];
+  };
+  // Every pinned demo key must appear in the directory with the same public key,
+  // or the standalone verifier would reject a genuine record as not-anchored.
+  for (const [regNo, kp] of Object.entries(DEMO_ISSUER_KEYS)) {
+    const entry = dir.issuers.find((i) => i.sebiRegNo === regNo);
+    assert.ok(entry, `directory is missing ${regNo}`);
+    assert.equal(entry!.publicKey, kp.publicKey, `public key mismatch for ${regNo}`);
+    assert.equal(entry!.status, "active");
+  }
+});
+
 test("transparency log stays intact and references real assets", () => {
   const { valid, reason } = getStore().verifyLog();
   assert.equal(valid, true, reason ?? "");

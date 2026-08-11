@@ -3,6 +3,7 @@ import { getStore } from "../db/store.js";
 import { env } from "../config/env.js";
 import type { EntityClass } from "../db/types.js";
 import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
+import { DEMO_ISSUER_KEYS } from "../config/demoIssuers.js";
 import { signContent } from "../services/signingService.js";
 import { makeDemoBundle } from "../services/demoAssets.js";
 import { makeDemoVideos } from "../services/demoVideo.js";
@@ -47,10 +48,13 @@ const SEED_ANNOUNCEMENTS = [
 ];
 
 // Demo reset: wipe the store so a recording can start from a clean state.
-// Gated exactly like seeding (demo mode, or the admin key).
+// This is destructive, so it is stricter than seeding: on a deployed
+// (production) backend it ALWAYS requires the admin key, so a random visitor
+// can't wipe the demo mid-review. Local development stays frictionless.
 seedRouter.post("/reset", (req, res) => {
-  if (!env.demoMode && req.header("x-admin-key") !== env.adminApiKey) {
-    res.status(403).json({ error: "Reset is disabled in production without the admin key." });
+  const needsKey = env.nodeEnv === "production" || !env.demoMode;
+  if (needsKey && req.header("x-admin-key") !== env.adminApiKey) {
+    res.status(403).json({ error: "Reset requires the admin key (x-admin-key)." });
     return;
   }
   getStore().reset();
@@ -69,7 +73,10 @@ seedRouter.post("/", async (req, res) => {
   // 1) Issuers (idempotent by SEBI reg no).
   for (const s of SEED_ISSUERS) {
     if (!store.getIssuerBySebiReg(s.sebiRegNo)) {
-      const keys = generateIssuerKeys();
+      // Use the pinned demo keypair so the issuer's public key matches the
+      // published trust directory (trusted-issuers.json); fall back to a random
+      // key only for issuers not in the pinned set.
+      const keys = DEMO_ISSUER_KEYS[s.sebiRegNo] ?? generateIssuerKeys();
       store.addIssuer({
         name: s.name,
         sebiRegNo: s.sebiRegNo,
