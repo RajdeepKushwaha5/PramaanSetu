@@ -11,7 +11,10 @@ import { existsSync, mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-process.env.PRAMAAN_DB_PATH = join(mkdtempSync(join(tmpdir(), "pramaan-test-")), "db.json");
+const testTmp = mkdtempSync(join(tmpdir(), "pramaan-test-"));
+process.env.PRAMAAN_DB_PATH = join(testTmp, "db.json");
+process.env.PRAMAAN_DEMO_KEYS = join(testTmp, "demo-issuer-keys.json");
+process.env.PRAMAAN_TRUST_DIR = join(testTmp, "trusted-issuers.json");
 process.env.GEMINI_API_KEYS = "";
 
 // Locate a local FFmpeg (repo/.tools) so video/audio tests can run; if not
@@ -111,15 +114,16 @@ test("tampered signature -> invalid_provenance, never original", async () => {
   asset.signature = original; // restore
 });
 
-test("pinned issuer keys match the published trust directory", async () => {
-  const { DEMO_ISSUER_KEYS } = await import("../src/config/demoIssuers.js");
+test("generated issuer keys match the published trust directory", async () => {
+  const { ensureDemoIssuerKeys, TRUST_DIR_PATH } = await import("../src/config/demoKeys.js");
   const { readFileSync } = await import("node:fs");
-  const dir = JSON.parse(readFileSync(join(process.cwd(), "trusted-issuers.json"), "utf8")) as {
+  const keys = ensureDemoIssuerKeys();
+  const dir = JSON.parse(readFileSync(TRUST_DIR_PATH, "utf8")) as {
     issuers: { sebiRegNo: string; publicKey: string; status: string }[];
   };
-  // Every pinned demo key must appear in the directory with the same public key,
-  // or the standalone verifier would reject a genuine record as not-anchored.
-  for (const [regNo, kp] of Object.entries(DEMO_ISSUER_KEYS)) {
+  // Every generated demo key must appear in the directory with the same public
+  // key, or the standalone verifier would reject a genuine record as not-anchored.
+  for (const [regNo, kp] of Object.entries(keys)) {
     const entry = dir.issuers.find((i) => i.sebiRegNo === regNo);
     assert.ok(entry, `directory is missing ${regNo}`);
     assert.equal(entry!.publicKey, kp.publicKey, `public key mismatch for ${regNo}`);
@@ -250,6 +254,107 @@ test("forged PDF circular with swapped QR -> altered, names the fraud payee", as
   const r = await verifyContent({ mimeType: "application/pdf", bytes: bundle.alteredPdf });
   assert.equal(r.verdict, "altered");
   assert.equal(r.match?.paymentTamper?.foundPayee, "fraudster12@ybl");
+});
+
+// ---- multi-page PDF: a tamper on ANY page must be caught (page-by-position) ----
+const { PDFDocument: PdfDoc } = await import("pdf-lib");
+const { Jimp: JimpLib } = await import("jimp");
+const QR = (await import("qrcode")).default;
+
+function fillBox(img: InstanceType<typeof JimpLib>, x0: number, y0: number, x1: number, y1: number, c: [number, number, number]) {
+  const w = img.bitmap.width;
+  const d = img.bitmap.data;
+  for (let y = y0; y < y1; y++)
+    for (let x = x0; x < x1; x++) {
+      const i = (y * w + x) * 4;
+      d[i] = c[0];
+      d[i + 1] = c[1];
+      d[i + 2] = c[2];
+      d[i + 3] = 255;
+    }
+}
+
+/** Deterministic 480x320 page. `variant` changes the visible content a lot. */
+async function pageImage(variant: number, qrPayload?: string): Promise<Buffer> {
+  const img = new JimpLib({ width: 480, height: 320, color: 0xffffffff });
+  fillBox(img, 0, 0, 480, 56, [11, 37, 69]);
+  for (let i = 0; i < 6; i++) {
+    const y = 90 + i * 26;
+    const width = 260 - ((i + variant) % 3) * 60;
+    fillBox(img, 30, y, 30 + width, y + 12, [70 + variant * 40, 100, 130]);
+  }
+  if (qrPayload) {
+    const qrPng = await QR.toBuffer(qrPayload, { width: 96, margin: 1 });
+    const qr = await JimpLib.read(qrPng);
+    img.composite(qr, 480 - 116, 320 - 116);
+  }
+  return img.getBuffer("image/png");
+}
+
+/** Assemble page PNGs into a deterministic multi-page PDF. */
+async function buildPdf(pages: Buffer[]): Promise<Buffer> {
+  const pdf = await PdfDoc.create();
+  const epoch = new Date(0);
+  pdf.setCreationDate(epoch);
+  pdf.setModificationDate(epoch);
+  pdf.setProducer("PramaanSetu");
+  pdf.setCreator("PramaanSetu");
+  for (const png of pages) {
+    const page = pdf.addPage([480, 320]);
+    const img = await pdf.embedPng(png);
+    page.drawImage(img, { x: 0, y: 0, width: 480, height: 320 });
+  }
+  return Buffer.from(await pdf.save());
+}
+
+const APPROVED = "upi://pay?pa=sebi@valid&pn=SEBI&am=0";
+const FRAUD = "upi://pay?pa=scam99@ybl&pn=SEBI%20Refund&am=5000";
+
+test("multi-page PDF: unchanged page cannot mask a tampered page", async () => {
+  // Sign a 3-page document (QR on page 1).
+  const p1 = await pageImage(0, APPROVED);
+  const p2 = await pageImage(1);
+  const p3 = await pageImage(2);
+  const signed = await buildPdf([p1, p2, p3]);
+  await signContent({ issuerId, title: "SEBI 3-page circular", mimeType: "application/pdf", bytes: signed });
+
+  // Genuine copy -> original (byte-exact).
+  const genuine = await verifyContent({ mimeType: "application/pdf", bytes: signed });
+  assert.equal(genuine.verdict, "original");
+
+  // Tamper ONLY page 2; pages 1 and 3 identical. Must be altered, page 2 named.
+  const p2edit = await pageImage(9); // very different content
+  const tamperedMid = await buildPdf([p1, p2edit, p3]);
+  const midR = await verifyContent({ mimeType: "application/pdf", bytes: tamperedMid });
+  assert.equal(midR.verdict, "altered");
+  assert.ok(
+    midR.match?.differences?.some((d) => /page 2/i.test(d)),
+    `expected a page-2 difference, got: ${JSON.stringify(midR.match?.differences)}`,
+  );
+
+  // Remove a page -> altered (page count changed).
+  const removed = await buildPdf([p1, p3]);
+  const remR = await verifyContent({ mimeType: "application/pdf", bytes: removed });
+  assert.equal(remR.verdict, "altered");
+  assert.ok(
+    remR.match?.differences?.some((d) => /page\(s\)|page count/i.test(d)),
+    `expected a page-count difference, got: ${JSON.stringify(remR.match?.differences)}`,
+  );
+});
+
+test("multi-page PDF: swapped QR on a non-first page -> altered, names payee", async () => {
+  // Sign a 2-page document with the payment QR on PAGE 2.
+  const a1 = await pageImage(3);
+  const a2 = await pageImage(4, APPROVED);
+  const signed = await buildPdf([a1, a2]);
+  await signContent({ issuerId, title: "SEBI 2-page notice", mimeType: "application/pdf", bytes: signed });
+
+  // Swap only the page-2 QR to a fraud handle.
+  const a2fraud = await pageImage(4, FRAUD);
+  const tampered = await buildPdf([a1, a2fraud]);
+  const r = await verifyContent({ mimeType: "application/pdf", bytes: tampered });
+  assert.equal(r.verdict, "altered");
+  assert.equal(r.match?.paymentTamper?.foundPayee, "scam99@ybl");
 });
 
 // ---- video + audio (voice-clone) tests; skip if FFmpeg is unavailable ----

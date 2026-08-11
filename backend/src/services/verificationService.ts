@@ -27,7 +27,7 @@ import {
 } from "../fingerprint/index.js";
 import { decodeQr, extractUpiPayee } from "../fingerprint/qr.js";
 import { getFingerprintIndex } from "../fingerprint/fpIndex.js";
-import { renderPdfFirstPage } from "../fingerprint/pdf.js";
+import { renderPdfFirstPage, renderPdfPages } from "../fingerprint/pdf.js";
 import { assessRisk, type RiskAssessment } from "../ai/riskEngine.js";
 import { detectSynthetic } from "../detect/detectionService.js";
 import type { SyntheticAssessment } from "../detect/types.js";
@@ -218,6 +218,55 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
           };
         }
 
+        // PDF: compare pages BY POSITION. The candidate above was found on a
+        // flattened fingerprint pool, which lets an unchanged page mask a
+        // tampered one - so re-decide the verdict page-by-page here. Render the
+        // submitted pages once; reuse them for the per-page QR scan below.
+        let effectiveDist = best.dist;
+        let worstPage = 0;
+        let pdfPages: Buffer[] | null = null;
+        if (mediaType === "pdf") {
+          pdfPages = await renderPdfPages(contentBuf);
+          const refPages = best.asset.pageHashes;
+          if (refPages && refPages.length > 0) {
+            if (pdfPages.length !== refPages.length) {
+              record({
+                verdict: "altered",
+                mediaType,
+                contentHash,
+                asset: best.asset,
+                tamperType: "pdf_page_count",
+              });
+              return {
+                verdict: "altered",
+                mediaType,
+                match: {
+                  ...publicMatch(best.asset, best.dist, originalSigValid),
+                  differences: [
+                    `The signed document has ${refPages.length} page(s) but the submitted file has ${pdfPages.length}.`,
+                    "Pages have been added, removed, or reordered. Do not trust it.",
+                  ],
+                },
+                message: `WARNING: This resembles a ${issuerName} document but its page count was changed (signed ${refPages.length}, submitted ${pdfPages.length}). Do not trust it.`,
+                contentHash,
+              };
+            }
+            // Worst-changed page decides the verdict, so an unchanged page can
+            // never mask a tampered one. The QR scan below runs first, so a
+            // swapped payment QR is still reported specifically (named payee).
+            const probePages = await Promise.all(pdfPages.map((p) => imageFingerprint(p)));
+            let worst = 0;
+            for (let i = 0; i < refPages.length; i++) {
+              const d = bestChangedCells([probePages[i]], refPages[i]);
+              if (d > worst) {
+                worst = d;
+                worstPage = i;
+              }
+            }
+            effectiveDist = worst;
+          }
+        }
+
         // Audio-replacement (voice-clone) check: if the video frames match a
         // signed asset but the audio track's spectrogram differs, the audio was
         // replaced - the signature of a dubbed / voice-cloned deepfake.
@@ -252,18 +301,20 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
 
         // Payment-tamper check: decode the QR and confirm the payee is still an
         // approved handle - catches a swapped payment QR even when pixels match.
-        // For PDFs, decode the QR from the rendered first page.
-        const qrBuffer =
+        // For PDFs, scan EVERY page (a fraud QR may sit on any page), reusing the
+        // pages already rendered above.
+        const qrBuffers: Buffer[] =
           mediaType === "image"
-            ? contentBuf
+            ? [contentBuf]
             : mediaType === "pdf"
-              ? await renderPdfFirstPage(contentBuf)
-              : null;
-        if (qrBuffer) {
-          const qrText = await decodeQr(qrBuffer);
+              ? (pdfPages ?? (await renderPdfPages(contentBuf)))
+              : [];
+        const approved = best.asset.manifest.approvedPaymentHandles;
+        for (let p = 0; p < qrBuffers.length; p++) {
+          const qrText = await decodeQr(qrBuffers[p]);
           const payee = qrText ? extractUpiPayee(qrText) : null;
-          const approved = best.asset.manifest.approvedPaymentHandles;
           if (payee && approved.length > 0 && !approved.includes(payee)) {
+            const where = mediaType === "pdf" ? ` (page ${p + 1})` : "";
             record({
               verdict: "altered",
               mediaType,
@@ -276,20 +327,20 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
               verdict: "altered",
               mediaType,
               match: {
-                ...publicMatch(best.asset, best.dist, originalSigValid),
+                ...publicMatch(best.asset, effectiveDist, originalSigValid),
                 differences: [
-                  `Payment address in the QR code is "${payee}", which is NOT an approved handle for ${issuerName}.`,
+                  `Payment address in the QR code${where} is "${payee}", which is NOT an approved handle for ${issuerName}.`,
                   `Approved handle(s): ${approved.join(", ")}. This is payment redirection - do not pay.`,
                 ],
                 paymentTamper: { foundPayee: payee, approvedPayees: approved },
               },
-              message: `WARNING: This looks like a ${issuerName} communication but its payment QR was SWAPPED to "${payee}". Do not pay.`,
+              message: `WARNING: This looks like a ${issuerName} communication but its payment QR${where} was SWAPPED to "${payee}". Do not pay.`,
               contentHash,
             };
           }
         }
 
-        if (best.dist <= DERIVATIVE_MAX_CELLS) {
+        if (effectiveDist <= DERIVATIVE_MAX_CELLS) {
           const { verdict, sigValid, message } = resolveGenuineVerdict(best.asset, false);
           record({ verdict, mediaType, contentHash, asset: best.asset });
           return {
@@ -297,6 +348,30 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
             mediaType,
             match: publicMatch(best.asset, best.dist, sigValid),
             message,
+            contentHash,
+          };
+        }
+
+        // PDF page edit (not a QR swap): name the tampered page.
+        if (mediaType === "pdf") {
+          record({
+            verdict: "altered",
+            mediaType,
+            contentHash,
+            asset: best.asset,
+            tamperType: "visual_edit",
+          });
+          return {
+            verdict: "altered",
+            mediaType,
+            match: {
+              ...publicMatch(best.asset, effectiveDist, originalSigValid),
+              differences: [
+                `Page ${worstPage + 1} differs from the signed original (${effectiveDist}/1024 cells changed).`,
+                "A page of a genuine signed document has been edited (e.g. a swapped figure, altered clause, or removed disclaimer). Do not trust it.",
+              ],
+            },
+            message: `WARNING: This resembles a genuine ${issuerName} document but page ${worstPage + 1} has been ALTERED. Do not act on it. Check the official source.`,
             contentHash,
           };
         }

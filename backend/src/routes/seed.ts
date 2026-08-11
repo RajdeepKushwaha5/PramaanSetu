@@ -3,7 +3,7 @@ import { getStore } from "../db/store.js";
 import { env } from "../config/env.js";
 import type { EntityClass } from "../db/types.js";
 import { generateApiKey, generateIssuerKeys } from "../crypto/signing.js";
-import { DEMO_ISSUER_KEYS } from "../config/demoIssuers.js";
+import { ensureDemoIssuerKeys } from "../config/demoKeys.js";
 import { signContent } from "../services/signingService.js";
 import { makeDemoBundle } from "../services/demoAssets.js";
 import { makeDemoVideos } from "../services/demoVideo.js";
@@ -70,13 +70,16 @@ seedRouter.post("/", async (req, res) => {
   }
   const store = getStore();
 
+  // Generate (once) the demo keypairs and (re)write the trusted-issuer
+  // directory so issuer public keys always match it. Private keys are gitignored.
+  const demoKeys = ensureDemoIssuerKeys();
+
   // 1) Issuers (idempotent by SEBI reg no).
   for (const s of SEED_ISSUERS) {
     if (!store.getIssuerBySebiReg(s.sebiRegNo)) {
-      // Use the pinned demo keypair so the issuer's public key matches the
-      // published trust directory (trusted-issuers.json); fall back to a random
-      // key only for issuers not in the pinned set.
-      const keys = DEMO_ISSUER_KEYS[s.sebiRegNo] ?? generateIssuerKeys();
+      // Use the generated demo keypair so the issuer's public key matches the
+      // trust directory; fall back to a random key for issuers not in the set.
+      const keys = demoKeys[s.sebiRegNo] ?? generateIssuerKeys();
       store.addIssuer({
         name: s.name,
         sebiRegNo: s.sebiRegNo,

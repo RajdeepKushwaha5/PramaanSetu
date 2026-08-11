@@ -6,6 +6,7 @@ import { signManifest } from "../crypto/signing.js";
 import {
   audioFingerprint,
   computeSigningFingerprints,
+  computePdfPageFingerprints,
   extFromMime,
   mediaTypeFromMime,
   sha256,
@@ -41,10 +42,18 @@ export async function signContent(input: SignInput): Promise<SignResult> {
   if (!contentBuf) throw new Error("No content provided (bytes or text).");
 
   const contentHash = sha256(contentBuf);
-  const perceptualHashes =
-    mediaType === "text"
-      ? []
-      : await computeSigningFingerprints(contentBuf, mediaType, input.mimeType);
+  // For PDFs, keep per-page fingerprints so verification compares pages by
+  // position; the flattened list is retained for the LSH candidate index.
+  let pageHashes: string[][] | undefined;
+  let perceptualHashes: string[];
+  if (mediaType === "text") {
+    perceptualHashes = [];
+  } else if (mediaType === "pdf") {
+    pageHashes = await computePdfPageFingerprints(contentBuf);
+    perceptualHashes = pageHashes.flat();
+  } else {
+    perceptualHashes = await computeSigningFingerprints(contentBuf, mediaType, input.mimeType);
+  }
 
   // Fingerprint the audio track for video/audio, so a replaced (voice-cloned)
   // track is detectable even when the video frames still match.
@@ -82,6 +91,7 @@ export async function signContent(input: SignInput): Promise<SignResult> {
     mimeType: input.mimeType,
     contentHash,
     perceptualHashes,
+    pageHashes,
     audioFingerprint: audioFp,
     manifest,
     signature,

@@ -24,6 +24,21 @@ export interface MimeResult {
   reason?: string;
 }
 
+/**
+ * Hard cap on a single decoded upload, enforced server-side. The Express JSON
+ * limit (40mb) bounds the whole request; this bounds the actual media so a large
+ * paste can't exhaust memory in fingerprinting/rendering. Matches the frontend's
+ * 20 MB client-side guard so honest users never hit it.
+ */
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
+/** True if the decoded byte length is within {@link MAX_UPLOAD_BYTES}. */
+export function withinUploadLimit(bytes: Buffer): boolean {
+  return bytes.length <= MAX_UPLOAD_BYTES;
+}
+
+export const UPLOAD_TOO_LARGE_MESSAGE = `File exceeds the ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB upload limit.`;
+
 export async function resolveMime(bytes: Buffer): Promise<MimeResult> {
   const detected = await fileTypeFromBuffer(bytes);
   if (!detected) {

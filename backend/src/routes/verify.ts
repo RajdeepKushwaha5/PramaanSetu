@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { verifyContent } from "../services/verificationService.js";
-import { resolveMime } from "../util/media.js";
+import { resolveMime, withinUploadLimit, UPLOAD_TOO_LARGE_MESSAGE } from "../util/media.js";
 
 export const verifyRouter = Router();
 
@@ -28,6 +28,10 @@ verifyRouter.post("/", async (req, res) => {
     let resolvedMime = mimeType;
     if (content) {
       bytes = Buffer.from(content, "base64");
+      if (!withinUploadLimit(bytes)) {
+        res.status(413).json({ error: UPLOAD_TOO_LARGE_MESSAGE });
+        return;
+      }
       const check = await resolveMime(bytes);
       if (!check.ok) {
         res.status(415).json({ error: check.reason });

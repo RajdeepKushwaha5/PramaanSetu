@@ -50,3 +50,7 @@ backend/datasets/detection/**/*.bmp
 # Private demo/pitch prep (kept local, not published)
 DEMO.md
 PITCH.md
+
+# Runtime-generated demo issuer keys + trust directory (never committed)
+backend/data/demo-issuer-keys.json
+backend/trusted-issuers.json

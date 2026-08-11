@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { assessRisk } from "../ai/riskEngine.js";
 import { assertGeminiConfigured } from "../config/env.js";
+import { withinUploadLimit, UPLOAD_TOO_LARGE_MESSAGE } from "../util/media.js";
 
 export const riskRouter = Router();
 
@@ -32,6 +33,10 @@ riskRouter.post("/", async (req, res) => {
   }
   if (!parsed.data.text && !parsed.data.image) {
     res.status(400).json({ error: "Provide 'text' and/or 'image'." });
+    return;
+  }
+  if (parsed.data.image && !withinUploadLimit(Buffer.from(parsed.data.image.data, "base64"))) {
+    res.status(413).json({ error: UPLOAD_TOO_LARGE_MESSAGE });
     return;
   }
 

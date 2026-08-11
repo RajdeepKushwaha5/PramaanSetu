@@ -81,13 +81,21 @@ try {
   sigOk = false;
 }
 
-// 3) Identity anchor - is the signing key the one published for this issuer?
-const trusted = directory.find(
-  (t) => (issuer.keyId && t.keyId === issuer.keyId) || t.publicKey === issuer.publicKey,
-);
+// 3) Identity anchor - the signing key must be the one the CLAIMED issuer
+//    publishes. Look up the trusted entry by the issuer the MANIFEST claims to
+//    be, then require its published key to equal the signing key. Otherwise a
+//    valid signature from issuer B could masquerade as issuer A.
+const claimed = manifest.issuer ?? {};
+const computedKeyId = createHash("sha256").update(issuer.publicKey).digest("hex").slice(0, 16);
+const trusted = directory.find((t) => t.sebiRegNo === claimed.sebiRegNo);
+
 const keyMatches = !!trusted && trusted.publicKey === issuer.publicKey;
+const nameOk = !!trusted && trusted.name === claimed.name && trusted.sebiRegNo === claimed.sebiRegNo;
+const keyIdOk = computedKeyId === (issuer.keyId ?? computedKeyId) && (!trusted || trusted.keyId === computedKeyId);
 const active = !!trusted && trusted.status === "active";
-const identityAnchored = keyMatches && active;
+const withinValidity = !trusted?.validFrom || Date.parse(trusted.validFrom) <= Date.now();
+const identityAnchored = !!trusted && keyMatches && nameOk && keyIdOk && active && withinValidity;
+const identityMismatch = !!trusted && !keyMatches; // claimed issuer exists, but a different key signed
 
 const genuine = hashOk && sigOk && identityAnchored;
 
@@ -98,11 +106,13 @@ console.log(`  Title          : ${manifest.title ?? "?"}`);
 console.log(`  Signing key id : ${issuer.keyId ?? "(none in bundle)"}\n`);
 console.log(`  [${mark(hashOk)}] content integrity  (SHA-256 recomputed from the actual content)`);
 console.log(`  [${mark(sigOk)}] issuer signature   (Ed25519 over the manifest)`);
-console.log(`  [${mark(identityAnchored)}] identity anchored  (key matches the trusted-issuer directory)`);
+console.log(`  [${mark(identityAnchored)}] identity anchored  (signing key is the one the claimed issuer publishes)`);
 if (!identityAnchored) {
-  if (!trusted) console.log(`           -> this key is NOT in the trusted directory (unknown issuer)`);
-  else if (!keyMatches) console.log(`           -> key does not match the directory's key for this issuer`);
-  else if (!active) console.log(`           -> the issuer's key is not active (revoked/expired) in the directory`);
+  if (!trusted) console.log(`           -> claimed issuer "${claimed.sebiRegNo ?? "?"}" is NOT in the trusted directory`);
+  else if (!keyMatches) console.log(`           -> IDENTITY MISMATCH: signature is valid, but for a DIFFERENT key than ${claimed.sebiRegNo} publishes (key id ${computedKeyId})`);
+  else if (!nameOk) console.log(`           -> the manifest's issuer name/reg does not match the directory entry`);
+  else if (!active) console.log(`           -> the issuer's key is not active in the directory`);
+  else if (!withinValidity) console.log(`           -> the issuer's key is not yet valid (validFrom in the future)`);
 }
 console.log();
 
@@ -110,10 +120,15 @@ if (genuine) {
   console.log(`  \x1b[32m✔ GENUINE\x1b[0m - the content is exactly what ${trusted.name} signed with its`);
   console.log(`    directory-published key. Verified without trusting the PramaanSetu server.\n`);
   process.exit(0);
+} else if (hashOk && sigOk && identityMismatch) {
+  console.log(`  \x1b[31m✘ IDENTITY MISMATCH - SIGNATURE VALID FOR A DIFFERENT ISSUER\x1b[0m`);
+  console.log(`    The manifest claims ${claimed.name ?? claimed.sebiRegNo}, but it was signed by a key`);
+  console.log(`    that issuer does NOT publish. This is a forged identity. NOT genuine.\n`);
+  process.exit(1);
 } else if (hashOk && sigOk && !identityAnchored) {
   console.log(`  \x1b[33m⚠ SIGNATURE VALID · CONTENT INTACT · IDENTITY NOT TRUST-ANCHORED\x1b[0m`);
-  console.log(`    The content was signed by this key and is unmodified, but the key is NOT in`);
-  console.log(`    the trusted directory - so this is not a proven official communication.\n`);
+  console.log(`    The content was signed by this key and is unmodified, but the claimed issuer is`);
+  console.log(`    not in the trusted directory - so this is not a proven official communication.\n`);
   process.exit(1);
 } else {
   console.log(`  \x1b[31m✘ NOT VERIFIED\x1b[0m - ${!hashOk ? "the content does not match the signed hash" : "the signature is invalid"}. Do not trust this record.\n`);

@@ -68,6 +68,22 @@ export async function computePerceptualHashes(
 }
 
 /**
+ * Per-page PDF fingerprints for SIGNING. Returns one geometry-robust fingerprint
+ * SET per page, in page order, so verification can compare pages by position
+ * (page 1 vs page 1, page 2 vs page 2) instead of flattening every page into one
+ * pool - which would let an unchanged page mask a tampered one.
+ */
+export async function computePdfPageFingerprints(buffer: Buffer): Promise<string[][]> {
+  try {
+    const pages = await renderPdfPages(buffer);
+    return await Promise.all(pages.map((p) => robustImageFingerprints(p)));
+  } catch (e) {
+    console.error("pdf page fingerprint failed:", e);
+    return [];
+  }
+}
+
+/**
  * Fingerprints stored at SIGNING time. Same as {@link computePerceptualHashes}
  * for the probe, but augments image and PDF-page references with geometry-robust
  * variants (small crops/rotations) so cropped or tilted genuine forwards still
