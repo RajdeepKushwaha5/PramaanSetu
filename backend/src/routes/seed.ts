@@ -115,28 +115,31 @@ seedRouter.post("/", async (req, res) => {
     }
   }
 
-  // 3) A signed "official circular" as both image and PDF + demo variants.
+  // 3) A signed "official circular" as both image and PDF + demo variants. This
+  // is a listed-company Rights Issue payment circular (a legitimate UPI-payment
+  // context), signed by that company, so a swapped QR is a believable attack.
   const sebi = store.getIssuerBySebiReg("SEBI-IND-0001")!;
+  const ril = store.getIssuerBySebiReg("INE002A01018")!;
   const bundle = await makeDemoBundle();
-  const circularTitle = "SEBI Master Circular (demo image)";
+  const circularTitle = "Reliance Rights Issue - Payment Instruction (demo image)";
   if (!store.listAssets().some((x) => x.title === circularTitle)) {
     await signContent({
-      issuerId: sebi.id,
+      issuerId: ril.id,
       title: circularTitle,
       mimeType: "image/png",
       bytes: bundle.originalPng,
-      authoritativeUrl: "https://www.sebi.gov.in",
+      authoritativeUrl: "https://www.ril.com",
     });
     signed.push(circularTitle);
   }
-  const pdfTitle = "SEBI Master Circular (demo PDF)";
+  const pdfTitle = "Reliance Rights Issue - Payment Instruction (demo PDF)";
   if (!store.listAssets().some((x) => x.title === pdfTitle)) {
     await signContent({
-      issuerId: sebi.id,
+      issuerId: ril.id,
       title: pdfTitle,
       mimeType: "application/pdf",
       bytes: bundle.originalPdf,
-      authoritativeUrl: "https://www.sebi.gov.in",
+      authoritativeUrl: "https://www.ril.com",
     });
     signed.push(pdfTitle);
   }

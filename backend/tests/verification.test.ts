@@ -48,7 +48,7 @@ before(async () => {
     name: "Securities and Exchange Board of India",
     sebiRegNo: "SEBI-TEST-1",
     entityClass: "sebi",
-    validUpiHandles: ["sebi@valid"],
+    validUpiHandles: ["sebi@valid", "rilinvestor@valid"],
     trustLevel: "demo",
     demoIssuer: true,
     registrationSource: "https://www.sebi.gov.in",

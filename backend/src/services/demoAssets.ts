@@ -21,8 +21,11 @@ import { PDFDocument } from "pdf-lib";
 const WIDTH = 520;
 const HEIGHT = 660;
 
-const APPROVED_UPI = "upi://pay?pa=sebi@valid&pn=SEBI&am=0";
-const FRAUD_UPI = "upi://pay?pa=fraudster12@ybl&pn=SEBI%20Refund&am=5000";
+// A listed company legitimately collecting Rights Issue application money via
+// UPI is a believable payment context (unlike a regulator asking for a "fee"),
+// so a swapped QR is a realistic redirection attack.
+const APPROVED_UPI = "upi://pay?pa=rilinvestor@valid&pn=Reliance%20Rights%20Issue&am=0";
+const FRAUD_UPI = "upi://pay?pa=fraudster12@ybl&pn=Rights%20Issue&am=14850";
 
 function setPx(img: InstanceType<typeof Jimp>, x: number, y: number, rgb: [number, number, number]) {
   const w = img.bitmap.width;
@@ -62,14 +65,14 @@ async function fonts() {
 }
 
 const BODY_LINES = [
-  "1.  It has come to the notice of the Board that investors are being asked to",
-  "     remit fees to unverified accounts using forwarded circulars and QR codes.",
+  "1.  Eligible equity shareholders may remit their Rights Issue application money",
+  "     using the official UPI handle printed below, on or before the closing date.",
   "",
-  "2.  Registered intermediaries and the Board never collect payments through any",
-  "     handle other than the officially published Validated UPI handles.",
+  "2.  The Company and its Registrar collect application money ONLY through the",
+  "     Validated UPI handle shown here. No other handle or account is authorised.",
   "",
-  "3.  Investors must pay any applicable processing fee ONLY via the official UPI",
-  "     code printed below, and must verify the source of any circular before paying.",
+  "3.  Beware of forwarded circulars carrying altered QR codes. Verify the source",
+  "     and the UPI handle against the exchange filing before making any payment.",
 ];
 
 /**
@@ -85,17 +88,17 @@ async function buildCircular(upiPayload: string): Promise<Buffer> {
   // Letterhead.
   fillRect(img, 0, 0, WIDTH, 72, [11, 37, 69]); // navy header band
   fillRect(img, 0, 72, WIDTH, 77, [200, 16, 46]); // red accent rule
-  img.print({ font: f.title, x: 24, y: 16, text: "SECURITIES AND EXCHANGE BOARD OF INDIA" });
-  img.print({ font: f.sub, x: 24, y: 44, text: "Office of Investor Assistance and Education" });
+  img.print({ font: f.title, x: 24, y: 16, text: "RELIANCE INDUSTRIES LIMITED" });
+  img.print({ font: f.sub, x: 24, y: 44, text: "Regd. Office: Maker Chambers IV, Nariman Point, Mumbai 400021" });
 
   // Title + reference block.
-  img.print({ font: f.head, x: 24, y: 96, text: "CIRCULAR" });
-  img.print({ font: f.small, x: 250, y: 100, text: "Ref: SEBI/HO/OIAE/IGRD/CIR/2026/0142" });
-  img.print({ font: f.small, x: 250, y: 118, text: "Date: August 11, 2026" });
+  img.print({ font: f.head, x: 24, y: 96, text: "RIGHTS ISSUE" });
+  img.print({ font: f.small, x: 330, y: 100, text: "Ref: RIL/RIGHTS/2026/0142" });
+  img.print({ font: f.small, x: 330, y: 118, text: "Date: August 11, 2026" });
   fillRect(img, 24, 150, WIDTH - 24, 152, [200, 205, 212]); // divider
 
   // Subject + body.
-  img.print({ font: f.body, x: 24, y: 162, text: "Sub: Payment of processing fee by investors - caution" });
+  img.print({ font: f.body, x: 24, y: 162, text: "Sub: Payment of Rights Issue application money via UPI" });
   BODY_LINES.forEach((line, i) => {
     if (line) img.print({ font: f.small, x: 24, y: 196 + i * 20, text: line });
   });
@@ -104,17 +107,17 @@ async function buildCircular(upiPayload: string): Promise<Buffer> {
   const boxY = 372;
   fillRect(img, 24, boxY, WIDTH - 24, boxY + 172, [244, 246, 249]); // panel
   fillRect(img, 24, boxY, WIDTH - 24, boxY + 2, [11, 37, 69]); // top rule
-  img.print({ font: f.small, x: 40, y: boxY + 26, text: "Scan to pay the processing fee" });
-  img.print({ font: f.small, x: 40, y: boxY + 46, text: "using the official UPI handle:" });
-  img.print({ font: f.body, x: 40, y: boxY + 84, text: "SEBI - Investor Services" });
+  img.print({ font: f.small, x: 40, y: boxY + 26, text: "Scan to pay your Rights Issue" });
+  img.print({ font: f.small, x: 40, y: boxY + 46, text: "application money. Official UPI:" });
+  img.print({ font: f.body, x: 40, y: boxY + 84, text: "rilinvestor@valid" });
   const qrPng = await QRCode.toBuffer(upiPayload, { width: 132, margin: 1 });
   const qr = await Jimp.read(qrPng);
   img.composite(qr, WIDTH - 40 - 132, boxY + 20);
 
   // Sign-off.
-  img.print({ font: f.small, x: 24, y: boxY + 196, text: "Yours faithfully," });
+  img.print({ font: f.small, x: 24, y: boxY + 196, text: "For Reliance Industries Limited" });
   img.print({ font: f.small, x: 24, y: boxY + 224, text: "Sd/-" });
-  img.print({ font: f.small, x: 24, y: boxY + 244, text: "General Manager, Office of Investor Assistance" });
+  img.print({ font: f.small, x: 24, y: boxY + 244, text: "Company Secretary & Compliance Officer" });
 
   return img.getBuffer("image/png");
 }
@@ -218,7 +221,7 @@ export async function makeDemoBundle(): Promise<DemoBundle> {
     alteredPdf,
     syntheticSample,
     authenticSample,
-    approvedUpi: "sebi@valid",
+    approvedUpi: "rilinvestor@valid",
     fraudUpi: "fraudster12@ybl",
   };
 }
