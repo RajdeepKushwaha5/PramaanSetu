@@ -54,3 +54,6 @@ PITCH.md
 # Runtime-generated demo issuer keys + trust directory (never committed)
 backend/data/demo-issuer-keys.json
 backend/trusted-issuers.json
+
+# Local demo sample files (regenerable from the seed endpoint)
+demo-samples/

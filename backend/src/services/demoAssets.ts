@@ -6,12 +6,20 @@
  *   - a copy whose payment QR was swapped -> Altered (payment tampering)
  */
 
-import { Jimp } from "jimp";
+import { Jimp, loadFont } from "jimp";
+import {
+  SANS_8_WHITE,
+  SANS_10_BLACK,
+  SANS_12_BLACK,
+  SANS_16_BLACK,
+  SANS_16_WHITE,
+  SANS_32_BLACK,
+} from "jimp/fonts";
 import QRCode from "qrcode";
 import { PDFDocument } from "pdf-lib";
 
-const WIDTH = 480;
-const HEIGHT = 320;
+const WIDTH = 520;
+const HEIGHT = 660;
 
 const APPROVED_UPI = "upi://pay?pa=sebi@valid&pn=SEBI&am=0";
 const FRAUD_UPI = "upi://pay?pa=fraudster12@ybl&pn=SEBI%20Refund&am=5000";
@@ -29,18 +37,85 @@ function fillRect(img: InstanceType<typeof Jimp>, x0: number, y0: number, x1: nu
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) setPx(img, x, y, rgb);
 }
 
-async function buildCircular(upiPayload: string): Promise<Buffer> {
-  const img = new Jimp({ width: WIDTH, height: HEIGHT, color: 0xffffffff });
-  fillRect(img, 0, 0, WIDTH, 56, [11, 37, 69]); // header band
-  fillRect(img, 0, 56, WIDTH, 60, [200, 16, 46]); // accent rule
-  for (let i = 0; i < 6; i++) {
-    const y = 90 + i * 26;
-    fillRect(img, 30, y, 30 + 260 - (i % 2) * 40, y + 10, [90, 107, 128]); // "text"
+// Bundled bitmap fonts (no system fonts needed, so the circular renders the same
+// locally and in the container). Loaded once and cached.
+type JimpFont = Awaited<ReturnType<typeof loadFont>>;
+let fontCache: {
+  title: JimpFont;
+  sub: JimpFont;
+  head: JimpFont;
+  body: JimpFont;
+  small: JimpFont;
+} | null = null;
+async function fonts() {
+  if (!fontCache) {
+    const [title, sub, head, body, small] = await Promise.all([
+      loadFont(SANS_16_WHITE),
+      loadFont(SANS_8_WHITE),
+      loadFont(SANS_32_BLACK),
+      loadFont(SANS_12_BLACK),
+      loadFont(SANS_10_BLACK),
+    ]);
+    fontCache = { title, sub, head, body, small };
   }
-  // Real scannable payment QR bottom-right.
-  const qrPng = await QRCode.toBuffer(upiPayload, { width: 96, margin: 1 });
+  return fontCache;
+}
+
+const BODY_LINES = [
+  "1.  It has come to the notice of the Board that investors are being asked to",
+  "     remit fees to unverified accounts using forwarded circulars and QR codes.",
+  "",
+  "2.  Registered intermediaries and the Board never collect payments through any",
+  "     handle other than the officially published Validated UPI handles.",
+  "",
+  "3.  Investors must pay any applicable processing fee ONLY via the official UPI",
+  "     code printed below, and must verify the source of any circular before paying.",
+];
+
+/**
+ * A realistic-looking official circular with real text, a letterhead, a
+ * reference number, and a genuine scannable payment QR. The genuine and forged
+ * variants are pixel-identical except for the QR payload, so a swapped payment
+ * QR is caught as `altered` while everything else matches.
+ */
+async function buildCircular(upiPayload: string): Promise<Buffer> {
+  const f = await fonts();
+  const img = new Jimp({ width: WIDTH, height: HEIGHT, color: 0xffffffff });
+
+  // Letterhead.
+  fillRect(img, 0, 0, WIDTH, 72, [11, 37, 69]); // navy header band
+  fillRect(img, 0, 72, WIDTH, 77, [200, 16, 46]); // red accent rule
+  img.print({ font: f.title, x: 24, y: 16, text: "SECURITIES AND EXCHANGE BOARD OF INDIA" });
+  img.print({ font: f.sub, x: 24, y: 44, text: "Office of Investor Assistance and Education" });
+
+  // Title + reference block.
+  img.print({ font: f.head, x: 24, y: 96, text: "CIRCULAR" });
+  img.print({ font: f.small, x: 250, y: 100, text: "Ref: SEBI/HO/OIAE/IGRD/CIR/2026/0142" });
+  img.print({ font: f.small, x: 250, y: 118, text: "Date: August 11, 2026" });
+  fillRect(img, 24, 150, WIDTH - 24, 152, [200, 205, 212]); // divider
+
+  // Subject + body.
+  img.print({ font: f.body, x: 24, y: 162, text: "Sub: Payment of processing fee by investors - caution" });
+  BODY_LINES.forEach((line, i) => {
+    if (line) img.print({ font: f.small, x: 24, y: 196 + i * 20, text: line });
+  });
+
+  // Payment callout box + a REAL scannable QR.
+  const boxY = 372;
+  fillRect(img, 24, boxY, WIDTH - 24, boxY + 172, [244, 246, 249]); // panel
+  fillRect(img, 24, boxY, WIDTH - 24, boxY + 2, [11, 37, 69]); // top rule
+  img.print({ font: f.small, x: 40, y: boxY + 26, text: "Scan to pay the processing fee" });
+  img.print({ font: f.small, x: 40, y: boxY + 46, text: "using the official UPI handle:" });
+  img.print({ font: f.body, x: 40, y: boxY + 84, text: "SEBI - Investor Services" });
+  const qrPng = await QRCode.toBuffer(upiPayload, { width: 132, margin: 1 });
   const qr = await Jimp.read(qrPng);
-  img.composite(qr, WIDTH - 116, HEIGHT - 116);
+  img.composite(qr, WIDTH - 40 - 132, boxY + 20);
+
+  // Sign-off.
+  img.print({ font: f.small, x: 24, y: boxY + 196, text: "Yours faithfully," });
+  img.print({ font: f.small, x: 24, y: boxY + 224, text: "Sd/-" });
+  img.print({ font: f.small, x: 24, y: boxY + 244, text: "General Manager, Office of Investor Assistance" });
+
   return img.getBuffer("image/png");
 }
 
