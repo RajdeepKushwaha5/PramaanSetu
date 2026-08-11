@@ -91,15 +91,20 @@ exports signed evidence packs for review.
 
 ## Demo
 
-There is no public deployment yet. After starting the project locally, these
-screens are available:
+**Live demo:** <https://pramaan-setu.vercel.app> (backend API:
+<https://pramaansetu-backend.onrender.com>). The backend runs on a free instance
+that sleeps when idle, so the first request may take ~30-50 s to wake. On first
+visit, open **/issuer -> initialise demo registry** to seed the demo corpus.
 
-| Screen | URL | Purpose |
+| Screen | Live URL | Purpose |
 | --- | --- | --- |
-| Overview | <http://localhost:3000> | Product story and trust model |
-| Investor verifier | <http://localhost:3000/verify> | Verify a message, image, video, audio file, or PDF |
-| Signing rail | <http://localhost:3000/issuer> | Seed demo issuers and sign content |
-| SupTech radar | <http://localhost:3000/dashboard> | Review metrics, campaigns, and shared indicators |
+| Overview | <https://pramaan-setu.vercel.app> | Product story and trust model |
+| Investor verifier | <https://pramaan-setu.vercel.app/verify> | Verify a message, image, video, audio file, or PDF |
+| Signing rail | <https://pramaan-setu.vercel.app/issuer> | Seed demo issuers and sign content |
+| SupTech radar | <https://pramaan-setu.vercel.app/dashboard> | Review metrics, campaigns, and shared indicators |
+
+Running locally instead, the same screens are at `http://localhost:3000`,
+`/verify`, `/issuer`, and `/dashboard`.
 
 ### Two-minute walkthrough
 
@@ -633,7 +638,9 @@ submission, as advisory feeds change over time. See [SECURITY.md](SECURITY.md).
 
 ## Deployment
 
-The project is not publicly deployed.
+Live: frontend on Vercel at <https://pramaan-setu.vercel.app>, backend on Render
+at <https://pramaansetu-backend.onrender.com>. See [DEPLOY.md](DEPLOY.md) for the
+full setup and post-deploy checklist.
 
 The frontend and backend are separate services:
 

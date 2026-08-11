@@ -130,7 +130,7 @@ function MockLoginGate() {
     <div className="mock-login" role="dialog" aria-modal="true" aria-label="Choose a role">
       <div className="mock-login-card">
         <div className="mock-login-head">
-          <span className="micro-label">MOCK ACCESS · DEMO ONLY</span>
+          <span className="micro-label">SIMULATED SIGN-IN</span>
           <h2>Choose how you&apos;re signing in</h2>
           <p>
             PramaanSetu serves three personas. Pick one to explore its surface -
