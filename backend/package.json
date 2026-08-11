@@ -16,7 +16,8 @@
     "benchmark:detection": "tsx scripts/detection-benchmark.mjs",
     "dataset:fetch": "node scripts/fetch-detection-dataset.mjs",
     "dataset:check": "node scripts/fetch-detection-dataset.mjs --validate",
-    "demo:reset": "node scripts/demo-reset.mjs"
+    "demo:reset": "node scripts/demo-reset.mjs",
+    "verify:record": "node scripts/verify-record.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.13.0",

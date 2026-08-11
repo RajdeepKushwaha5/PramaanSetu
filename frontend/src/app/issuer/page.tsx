@@ -29,7 +29,9 @@ interface SignResult {
   signature: string;
   manifest: {
     publishedAt?: string;
+    contentHash?: string;
     issuer?: { name?: string; sebiRegNo?: string };
+    [k: string]: unknown;
   };
   transparencyLog: { seq: number; entryHash: string };
 }
@@ -67,6 +69,42 @@ export default function IssuerPage() {
       return;
     }
     setFile(f);
+  }
+
+  // Download a self-contained proof bundle (manifest + signature + issuer public
+  // key + content) that anyone can verify OFFLINE with `npm run verify:record`,
+  // without trusting this server's verdict.
+  async function downloadProofBundle() {
+    if (!result || !signedPayload) return;
+    try {
+      const kr = await fetch(apiUrl(`/api/issuers/${issuerId}/key`));
+      if (!kr.ok) throw new Error("Could not fetch the issuer public key.");
+      const key = await kr.json();
+      const content =
+        signedPayload.kind === "text"
+          ? { encoding: "utf8", value: signedPayload.text }
+          : { encoding: "base64", value: signedPayload.content };
+      const bundle = {
+        format: "pramaansetu-proof-bundle/1.0",
+        note: "Independently verifiable offline: `npm run verify:record -- <this-file>` — no PramaanSetu server required.",
+        manifest: result.manifest,
+        signature: result.signature,
+        signatureAlgorithm: "Ed25519",
+        issuer: { publicKey: key.publicKey, keyId: key.keyId, name: key.name, sebiRegNo: key.sebiRegNo },
+        content,
+      };
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `pramaansetu-proof-${result.assetId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError((e as Error).message);
+    }
   }
 
   // Carry the just-signed content to the verifier so "verify a copy" actually
@@ -346,7 +384,7 @@ export default function IssuerPage() {
           <span>{result ? "COMMITTED" : "NO RECORD YET"}</span>
         </div>
         {result ? (
-          <SigningReceipt result={result} selected={selected} revoked={revoked} onRevoke={revoke} onVerifyCopy={verifyCopy} busy={busy} canOperate={canOperate} />
+          <SigningReceipt result={result} selected={selected} revoked={revoked} onRevoke={revoke} onVerifyCopy={verifyCopy} onDownloadBundle={downloadProofBundle} busy={busy} canOperate={canOperate} />
         ) : (
           <div className="receipt-empty">
             <span>manifest://awaiting-content</span>
@@ -358,7 +396,7 @@ export default function IssuerPage() {
   );
 }
 
-function SigningReceipt({ result, selected, revoked, onRevoke, onVerifyCopy, busy, canOperate }: { result: SignResult; selected?: Issuer; revoked: boolean; onRevoke: () => void; onVerifyCopy: () => void; busy: boolean; canOperate: boolean }) {
+function SigningReceipt({ result, selected, revoked, onRevoke, onVerifyCopy, onDownloadBundle, busy, canOperate }: { result: SignResult; selected?: Issuer; revoked: boolean; onRevoke: () => void; onVerifyCopy: () => void; onDownloadBundle: () => void; busy: boolean; canOperate: boolean }) {
   return (
     <div className={`signing-receipt ${revoked ? "is-revoked" : ""}`}>
       <div className="receipt-success">
@@ -374,6 +412,7 @@ function SigningReceipt({ result, selected, revoked, onRevoke, onVerifyCopy, bus
         </div>
         <div className="receipt-actions">
           <button type="button" className="button" onClick={onVerifyCopy}>verify a copy →</button>
+          <button type="button" className="button" onClick={onDownloadBundle} title="Self-contained proof, verifiable offline with npm run verify:record">download proof bundle ↓</button>
           {!revoked && (
             <button type="button" className="button danger" onClick={onRevoke} disabled={!canOperate || busy}>
               {busy ? "revoking…" : canOperate ? "revoke record" : "issuer mode required"}

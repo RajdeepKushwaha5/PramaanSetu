@@ -162,10 +162,24 @@ demo registry** once, then:
 
 Honest note: an **unsigned** genuine document correctly returns **Unverified**
 (we never fabricate provenance) — to test the provenance path on your own file,
-sign it on **/issuer** first, then verify it. Independent verification is
-possible too: every issuer's public key is exposed at
-`GET /api/issuers/:id/key`, so an Ed25519 signature can be checked without
-trusting this backend.
+sign it on **/issuer** first, then verify it.
+
+**6. Verify a signature yourself — don't trust our server**
+
+Because the promise is *proof*, you can check it independently. On any signing
+receipt, click **download proof bundle** (manifest + Ed25519 signature + the
+issuer's public key + the content), then run the standalone verifier — which
+imports nothing from PramaanSetu and never calls the backend:
+
+```bash
+npm run verify:record -- path/to/pramaansetu-proof-<id>.json
+```
+
+It recomputes the SHA-256 content hash and verifies the Ed25519 signature with
+only Node's built-in crypto, printing **GENUINE** or **NOT VERIFIED** (and exits
+non-zero on failure). Change one character of the content in the bundle and it
+fails the hash check — proving the verdict isn't something this backend can fake.
+Every issuer's public key is also served at `GET /api/issuers/:id/key`.
 
 ## Architecture
 

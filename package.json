@@ -14,7 +14,8 @@
     "benchmark:scale": "npm --prefix backend run benchmark:scale",
     "benchmark:real": "npm --prefix backend run benchmark:real",
     "benchmark:detection": "npm --prefix backend run benchmark:detection",
-    "demo:reset": "npm --prefix backend run demo:reset"
+    "demo:reset": "npm --prefix backend run demo:reset",
+    "verify:record": "npm --prefix backend run verify:record"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
