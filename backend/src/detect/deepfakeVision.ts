@@ -60,7 +60,7 @@ Weigh generation/deepfake artefacts such as:
 - Signs of face-swap: blending seams, mismatched skin tone at the jawline
 
 IMPORTANT: an authentic official document, chart, or screenshot is NOT synthetic
-just because it is computer-generated — only flag genuine AI-generation or
+just because it is computer-generated - only flag genuine AI-generation or
 manipulation artefacts. When unsure, say so with a mid score.
 
 Return ONLY valid JSON matching exactly:

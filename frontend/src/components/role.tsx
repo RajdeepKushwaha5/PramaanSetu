@@ -5,7 +5,7 @@
  *
  * The SEBI TechSprint organisers confirmed a mock login is acceptable for the
  * demo ("focus should be on system functionality"), so this is deliberately
- * frictionless and fully offline — no external identity provider that could
+ * frictionless and fully offline - no external identity provider that could
  * fail on the virtual jury call. It models the three real personas the product
  * serves and remembers the choice in localStorage.
  */
@@ -133,7 +133,7 @@ function MockLoginGate() {
           <span className="micro-label">MOCK ACCESS · DEMO ONLY</span>
           <h2>Choose how you&apos;re signing in</h2>
           <p>
-            PramaanSetu serves three personas. Pick one to explore its surface —
+            PramaanSetu serves three personas. Pick one to explore its surface -
             this is a demo login (no password), so you can switch any time from
             the header.
           </p>

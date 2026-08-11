@@ -21,9 +21,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "PramaanSetu — Trust Layer for Securities Market Communications",
+  title: "PramaanSetu - Trust Layer for Securities Market Communications",
   description:
-    "Verify that a financial communication is genuinely from SEBI, an exchange, or a listed company — and catch impersonations before you pay.",
+    "Verify that a financial communication is genuinely from SEBI, an exchange, or a listed company - and catch impersonations before you pay.",
 };
 
 export const viewport: Viewport = {

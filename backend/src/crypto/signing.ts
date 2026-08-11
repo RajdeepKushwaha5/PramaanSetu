@@ -1,5 +1,5 @@
 /**
- * Issuer signing with Ed25519 (Node built-in crypto — no native deps).
+ * Issuer signing with Ed25519 (Node built-in crypto - no native deps).
  *
  * Each issuer has an Ed25519 keypair. Official communications are signed by
  * signing the canonical JSON of their manifest. In production the private key
@@ -36,7 +36,7 @@ export function generateIssuerKeys(): KeyPairB64 {
   };
 }
 
-/** Deterministic JSON — sorts object keys so signing is reproducible. */
+/** Deterministic JSON - sorts object keys so signing is reproducible. */
 export function canonicalize(value: unknown): string {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);

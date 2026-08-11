@@ -3,7 +3,7 @@
  *
  * Deterministic first (cryptography + fingerprints), AI only as a fallback on
  * genuinely unverified content. A record whose signature does NOT validate is
- * never reported as genuine — it becomes `invalid_provenance`. Revocation and
+ * never reported as genuine - it becomes `invalid_provenance`. Revocation and
  * expiry are applied to exact matches AND to re-compressed derivatives.
  */
 
@@ -151,7 +151,7 @@ function resolveGenuineVerdict(
     return {
       verdict: "invalid_provenance",
       sigValid,
-      message: `A record exists and its signature validates, but the tamper-evident transparency log FAILED integrity (${provenance.reason}). The registry may be compromised — do not trust this result.`,
+      message: `A record exists and its signature validates, but the tamper-evident transparency log FAILED integrity (${provenance.reason}). The registry may be compromised - do not trust this result.`,
     };
   }
   return {
@@ -220,7 +220,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
 
         // Audio-replacement (voice-clone) check: if the video frames match a
         // signed asset but the audio track's spectrogram differs, the audio was
-        // replaced — the signature of a dubbed / voice-cloned deepfake.
+        // replaced - the signature of a dubbed / voice-cloned deepfake.
         if (mediaType === "video" && best.asset.audioFingerprint && contentBuf) {
           const probeAudio = await audioFingerprint(contentBuf, extFromMime(input.mimeType));
           if (probeAudio) {
@@ -243,7 +243,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
                     "This is the signature of a voice-clone or dubbed deepfake. Do not trust the audio.",
                   ],
                 },
-                message: `WARNING: The video looks like a genuine ${issuerName} communication, but its AUDIO was REPLACED — likely a voice clone. Do not trust it.`,
+                message: `WARNING: The video looks like a genuine ${issuerName} communication, but its AUDIO was REPLACED - likely a voice clone. Do not trust it.`,
                 contentHash,
               };
             }
@@ -251,7 +251,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
         }
 
         // Payment-tamper check: decode the QR and confirm the payee is still an
-        // approved handle — catches a swapped payment QR even when pixels match.
+        // approved handle - catches a swapped payment QR even when pixels match.
         // For PDFs, decode the QR from the rendered first page.
         const qrBuffer =
           mediaType === "image"
@@ -279,7 +279,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
                 ...publicMatch(best.asset, best.dist, originalSigValid),
                 differences: [
                   `Payment address in the QR code is "${payee}", which is NOT an approved handle for ${issuerName}.`,
-                  `Approved handle(s): ${approved.join(", ")}. This is payment redirection — do not pay.`,
+                  `Approved handle(s): ${approved.join(", ")}. This is payment redirection - do not pay.`,
                 ],
                 paymentTamper: { foundPayee: payee, approvedPayees: approved },
               },
@@ -351,7 +351,7 @@ export async function verifyContent(input: VerifyInput): Promise<VerifyResult> {
  * Match an unsigned audio clip against signed audio records by spectrogram
  * distance. Returns a `derivative` verdict when the clip is a recompressed copy
  * of a signed recording (a forwarded voice note), or null when it matches
- * nothing — in which case the caller falls through to unverified + the
+ * nothing - in which case the caller falls through to unverified + the
  * synthetic-voice detector, which is the right tool for "was this audio
  * manipulated?".
  *
@@ -412,7 +412,7 @@ async function unverified(
   let riskScore: number | null = null;
 
   // Synthetic-media detection: for unsigned image/video/audio, answer the other
-  // half of the problem statement — is the content itself AI-generated/deepfaked?
+  // half of the problem statement - is the content itself AI-generated/deepfaked?
   // Kicked off concurrently with the phishing-risk call below (different
   // questions on the same content) so an unsigned image isn't doubly slow.
   const syntheticPromise: Promise<SyntheticAssessment | undefined> =

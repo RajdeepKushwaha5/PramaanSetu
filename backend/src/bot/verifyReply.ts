@@ -23,11 +23,11 @@ export function esc(s: unknown): string {
 const HEADER: Record<string, string> = {
   original: "VERIFIED ORIGINAL",
   derivative: "VERIFIED COPY",
-  altered: "ALTERED — DO NOT TRUST",
-  invalid_provenance: "INVALID SIGNATURE — DO NOT TRUST",
-  revoked: "REVOKED — DO NOT ACT ON THIS",
-  expired: "EXPIRED — NO LONGER CURRENT",
-  unverified: "UNVERIFIED — BE CAUTIOUS",
+  altered: "ALTERED - DO NOT TRUST",
+  invalid_provenance: "INVALID SIGNATURE - DO NOT TRUST",
+  revoked: "REVOKED - DO NOT ACT ON THIS",
+  expired: "EXPIRED - NO LONGER CURRENT",
+  unverified: "UNVERIFIED - BE CAUTIOUS",
 };
 
 const SAFE = new Set(["original", "derivative"]);
@@ -63,12 +63,12 @@ export function formatVerdict(r: VerifyResult): string {
       s.label === "likely-synthetic"
         ? "LIKELY AI-GENERATED / DEEPFAKE"
         : s.label === "uncertain"
-          ? "UNCERTAIN — mixed indicators"
+          ? "UNCERTAIN - mixed indicators"
           : "no strong synthetic indicators";
     lines.push("");
     lines.push(`🧪 Synthetic-media check: <b>${esc(labelText)}</b> (${esc(s.syntheticScore)}/100)`);
     const topSignal = s.signals?.[0];
-    if (topSignal) lines.push(esc(`${topSignal.label} — ${topSignal.detail}`));
+    if (topSignal) lines.push(esc(`${topSignal.label} - ${topSignal.detail}`));
     lines.push("<i>Detection is a signal, not proof.</i>");
   }
 

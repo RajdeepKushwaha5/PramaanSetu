@@ -7,7 +7,7 @@
  *
  *  - Spectral-shape stability: synthetic voices often hold an unnaturally
  *    constant spectral envelope frame-to-frame (low temporal variation).
- *  - Noise floor: cloned/TTS audio is frequently "too clean" — almost no room
+ *  - Noise floor: cloned/TTS audio is frequently "too clean" - almost no room
  *    tone between phonemes.
  *
  * Like the image forensics, these are conservative corroborating heuristics; the

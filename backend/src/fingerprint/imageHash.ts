@@ -121,7 +121,7 @@ export const GRID_SIZE = GRID;
 /**
  * Compact 64-bit coarse signature (8x8 grayscale average-hash) derived from the
  * full colour fingerprint. Robust to recompression, so a copy/altered image
- * shares almost all bits with its original — which lets an LSH index bucket
+ * shares almost all bits with its original - which lets an LSH index bucket
  * them together for sub-linear candidate search.
  */
 export function coarseSignature(b64: string): bigint {
@@ -146,7 +146,7 @@ export function coarseSignature(b64: string): bigint {
 }
 
 /**
- * Per-cell change map between two fingerprints — used to localise tampering
+ * Per-cell change map between two fingerprints - used to localise tampering
  * (draw a heatmap over the changed region). Returns a row-major array of 0/1.
  */
 export function cellDiffGrid(

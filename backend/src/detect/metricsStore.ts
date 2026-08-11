@@ -2,7 +2,7 @@
  * Detection-metrics cache. Serves the latest evaluation to the API/UI.
  *
  * On first request (nothing stored) it computes a deterministic FORENSIC-ONLY
- * baseline on the illustrative corpus — fast, no Gemini quota — so the app
+ * baseline on the illustrative corpus - fast, no Gemini quota - so the app
  * always shows evidence. Running `npm run benchmark:detection` (optionally with
  * the vision model and a held-out set) overwrites the stored metrics with
  * stronger numbers that the API then serves.
@@ -50,7 +50,7 @@ export async function computeMetrics(opts: { aiEnabled: boolean }): Promise<Dete
   const dataset = heldOut ? "held-out" : "illustrative";
   const datasetNote = heldOut
     ? "Held-out set from backend/datasets/detection (real samples you provided)."
-    : "Built-in illustrative synthetic set — NOT a real deepfake benchmark. Drop real images into backend/datasets/detection/{authentic,synthetic} and re-run for held-out numbers.";
+    : "Built-in illustrative synthetic set - NOT a real deepfake benchmark. Drop real images into backend/datasets/detection/{authentic,synthetic} and re-run for held-out numbers.";
   const metrics = await evaluateDetector(samples, { dataset, datasetNote, aiEnabled: opts.aiEnabled });
   writeMetrics(metrics);
   return metrics;

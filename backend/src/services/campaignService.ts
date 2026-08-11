@@ -5,9 +5,9 @@
  * indicator (impersonated entity, UPI handle, phone number, or domain). Each
  * connected component is a campaign. This links submissions even when the AI
  * extracts slightly different entity names, as long as a handle/phone/domain
- * matches — which is how real scam campaigns are actually traced.
+ * matches - which is how real scam campaigns are actually traced.
  *
- * Severity tiers (the reviewer's point — do NOT call every unverified item
+ * Severity tiers (the reviewer's point - do NOT call every unverified item
  * "fraud"):
  *   confirmed  = altered / invalid_provenance  (matched a genuine asset, tampered)
  *   suspected  = unverified with high/critical AI risk
@@ -23,7 +23,7 @@ export interface Campaign {
   id: number;
   severity: Exclude<Severity, "low">;
   eventCount: number;
-  eventIds: string[]; // explicit membership — evidence selects by these, not by re-derived indicators
+  eventIds: string[]; // explicit membership - evidence selects by these, not by re-derived indicators
   confirmedCount: number;
   suspectedCount: number;
   entities: string[];
@@ -39,7 +39,7 @@ export interface Campaign {
 export function severityOf(e: VerificationEvent): Severity {
   // Only content-level tampering (edited content, swapped payment QR, replaced
   // audio) is auto-"confirmed" external fraud. A failed signature or broken log
-  // (invalid_provenance) is a REGISTRY-INTEGRITY issue that needs human review —
+  // (invalid_provenance) is a REGISTRY-INTEGRITY issue that needs human review -
   // not an automatic fraud attribution against the (often legitimate) issuer it
   // impersonates. That prevents a system-integrity incident from manufacturing
   // "confirmed fraud" campaigns.

@@ -30,7 +30,7 @@ issuersRouter.get("/", (_req, res) => {
 });
 
 /**
- * Public-key directory entry for one issuer — the material needed to verify its
+ * Public-key directory entry for one issuer - the material needed to verify its
  * signatures independently (public key, key id, algorithm, trust level).
  */
 issuersRouter.get("/:id/key", (req, res) => {
@@ -70,7 +70,7 @@ const createSchema = z.object({
  * Creating an issuer mints a signing identity, so it is privileged: it requires
  * the admin API key. Without ADMIN_API_KEY configured, public creation is
  * disabled entirely (the deployed demo relies on pre-provisioned issuers).
- * Issuers created this way are marked trustLevel "demo" — the cryptography then
+ * Issuers created this way are marked trustLevel "demo" - the cryptography then
  * only proves PramaanSetu generated the key, NOT that SEBI/NSE owns it.
  */
 issuersRouter.post("/", (req, res) => {

@@ -103,7 +103,7 @@ export function buildCampaignEvidence(campaignId: number) {
   if (!campaign) return null;
 
   // Select by EXPLICIT campaign membership (event ids), not by re-deriving
-  // indicators — so an indicator-less campaign still exports its events, and
+  // indicators - so an indicator-less campaign still exports its events, and
   // membership can never disagree with the clustering that formed the campaign.
   const memberIds = new Set(campaign.eventIds);
   const relatedEvents = store

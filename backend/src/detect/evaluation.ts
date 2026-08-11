@@ -3,8 +3,8 @@
  *
  * Runs the synthetic-media detector over a LABELLED corpus and reports standard
  * classification metrics (confusion matrix, accuracy, precision, recall, F1,
- * specificity). This is the evidence PS1 explicitly asks for — "clear evidence
- * of detection or authentication performance" — turning "we call a model" into
+ * specificity). This is the evidence PS1 explicitly asks for - "clear evidence
+ * of detection or authentication performance" - turning "we call a model" into
  * "we measured N samples and here is the confusion matrix".
  *
  * The corpus is dataset-driven: point it at a held-out set of real deepfakes and

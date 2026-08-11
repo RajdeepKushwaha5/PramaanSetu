@@ -4,7 +4,7 @@
  * Measured with `npm run benchmark:detection -- --ai` on a held-out set of
  * 10 real AI-generated (diffusion) images vs 20 real photographs. The dataset
  * images are gitignored (licensing / repo size), so this committed summary is
- * what the API + dashboard serve by default — including on a fresh clone or a
+ * what the API + dashboard serve by default - including on a fresh clone or a
  * public deployment where the images aren't present.
  *
  * Re-run the benchmark on your own held-out set to overwrite it

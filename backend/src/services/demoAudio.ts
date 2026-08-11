@@ -29,7 +29,7 @@ export interface DemoAudioBundle {
   unrelatedM4a: Buffer;
 }
 
-// A layered tone "utterance" — a couple of formant-like sines that give the
+// A layered tone "utterance" - a couple of formant-like sines that give the
 // spectrogram enough structure to be distinctive from the unrelated clip.
 const ORIGINAL_FILTER =
   "sine=frequency=240:duration=3[a];sine=frequency=620:duration=3[b];sine=frequency=1300:duration=3[c];[a][b]amix=inputs=2[ab];[ab][c]amix=inputs=2";

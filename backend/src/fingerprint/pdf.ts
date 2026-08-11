@@ -3,7 +3,7 @@
  * perceptual + QR treatment as images. Each page is rasterised to a PNG and
  * then fed through the existing image fingerprint and QR-decode pipeline.
  *
- * Uses pdfjs-dist (legacy, worker disabled) + @napi-rs/canvas — both verified
+ * Uses pdfjs-dist (legacy, worker disabled) + @napi-rs/canvas - both verified
  * to run in this Node environment.
  */
 

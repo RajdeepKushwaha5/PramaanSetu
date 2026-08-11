@@ -4,7 +4,7 @@
  * The security property that actually matters for a "swapped payment QR" attack
  * is not whether pixels changed, but whether the QR now points to a DIFFERENT
  * payee. We decode the QR and compare its UPI address to the issuer's approved
- * handles — catching payment redirection even when the image looks identical.
+ * handles - catching payment redirection even when the image looks identical.
  */
 
 import * as JsQRNs from "jsqr";

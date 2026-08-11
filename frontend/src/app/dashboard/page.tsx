@@ -77,7 +77,7 @@ async function safeDownload(path: string, filename: string) {
   try {
     await downloadJson(path, filename);
   } catch {
-    window.alert("Evidence export failed — could not reach the intelligence service. Please try again.");
+    window.alert("Evidence export failed - could not reach the intelligence service. Please try again.");
   }
 }
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
     try {
       await downloadJson("/api/evidence", `pramaansetu-intelligence-${Date.now()}.json`);
     } catch {
-      setError("Evidence export failed — could not reach the intelligence service.");
+      setError("Evidence export failed - could not reach the intelligence service.");
     }
   }
 
@@ -427,7 +427,7 @@ function RadarStat({ label, value, sub, tone }: { label: string; value?: number;
   return (
     <div className={`radar-stat ${tone ?? ""}`}>
       <span>{label}</span>
-      <strong>{value == null ? "—" : value.toString().padStart(2, "0")}</strong>
+      <strong>{value == null ? "-" : value.toString().padStart(2, "0")}</strong>
       <p>{sub}</p>
     </div>
   );
@@ -445,7 +445,7 @@ function CampaignCard({ campaign, index, onIndicator, filter, canExport = true }
             <h3>{entity}</h3>
           </div>
           <div className="campaign-score">
-            <strong>{campaign.maxRiskScore || "—"}</strong>
+            <strong>{campaign.maxRiskScore || "-"}</strong>
             <span>MAX RISK</span>
           </div>
         </div>
@@ -481,7 +481,7 @@ function Metric({ label, value }: { label: string; value: number }) {
 }
 
 function IndicatorLine({ label, values, onPick, filter, type }: { label: string; values: string[]; onPick?: (v: string) => void; filter?: Filter | null; type?: FilterType }) {
-  if (!values.length) return <div><span>{label}</span><p>—</p></div>;
+  if (!values.length) return <div><span>{label}</span><p>-</p></div>;
   return (
     <div>
       <span>{label}</span>
@@ -570,7 +570,7 @@ function DetectionPerformance() {
         </div>
       </div>
 
-      {err && <div className="error-box">Detection metrics unavailable — is the backend running?</div>}
+      {err && <div className="error-box">Detection metrics unavailable - is the backend running?</div>}
       {!err && !m && <div className="empty-state">measuring…</div>}
 
       {m && (
@@ -644,7 +644,7 @@ function DetectionPanel({ detection }: { detection?: Stats["detection"] }) {
     <div className="toplist-panel">
       <div className="panel-header"><strong>synthetic-media detection</strong><span>MEDIA</span></div>
       {d.mediaScanned === 0 ? (
-        <div className="empty-state">No media scanned yet — verify an image, video, or audio file</div>
+        <div className="empty-state">No media scanned yet - verify an image, video, or audio file</div>
       ) : (
         <>
           {rows.map((r, i) => (

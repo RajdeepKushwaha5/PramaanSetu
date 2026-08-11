@@ -66,7 +66,7 @@ class GeminiKeyManager {
   /**
    * Pick the next usable key via round-robin, skipping any key that is still
    * cooling down. If every key is cooling down, returns the one whose cooldown
-   * expires soonest (caller may still try it — better than failing outright).
+   * expires soonest (caller may still try it - better than failing outright).
    */
   acquire(): KeySlot {
     if (this.slots.length === 0) {

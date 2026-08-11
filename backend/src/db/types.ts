@@ -30,7 +30,7 @@ export interface Issuer {
   sebiRegNo: string;
   entityClass: EntityClass;
   publicKey: string; // base64 SPKI (Ed25519)
-  privateKey: string; // base64 PKCS8 — PROTOTYPE ONLY (prod: HSM/KMS)
+  privateKey: string; // base64 PKCS8 - PROTOTYPE ONLY (prod: HSM/KMS)
   apiKey: string; // secret bearer token that authorises signing as this issuer
   demoIssuer: boolean; // pre-approved demo identity (keyless signing allowed in demo mode)
   validUpiHandles: string[];

@@ -7,7 +7,7 @@ really came from the organisation named in it. Issuers can sign official
 messages and media, investors can verify suspicious content, and regulators can
 see related fraud reports as connected campaigns.
 
-Think of it as **Digital Public Infrastructure for content authenticity** — a
+Think of it as **Digital Public Infrastructure for content authenticity** - a
 UPI/Aadhaar-style signed-provenance rail for the securities market. SEBI and its
 regulated intermediaries sign what is official; any investor verifies it in one
 tap, on the web or inside a chat app (a working Telegram bot today; WhatsApp
@@ -67,21 +67,21 @@ is the media itself AI-generated or a deepfake? Each modality is scored 0–100
 by combining two independent layers so a verdict still appears if the model is
 rate-limited:
 
-- **Image** — a Gemini vision prompt tuned for GAN/diffusion and face-swap
+- **Image** - a Gemini vision prompt tuned for GAN/diffusion and face-swap
   artefacts, plus deterministic forensics (error-level analysis and
   noise-uniformity cues).
-- **Video** — representative frames are sampled with FFmpeg and scored for
+- **Video** - representative frames are sampled with FFmpeg and scored for
   deepfake cues (per-frame and cross-frame), combined with an audio check.
-- **Audio** — a Gemini audio prompt for synthetic/cloned speech, plus
+- **Audio** - a Gemini audio prompt for synthetic/cloned speech, plus
   deterministic spectral-stability and noise-floor forensics.
-- **Text** — the phishing risk engine (below) extracts scam signals and
+- **Text** - the phishing risk engine (below) extracts scam signals and
   indicators.
 
 The model leads (0.68) and forensics corroborate (0.32) when both are
 available; forensic-only scores are capped to reduce the chance of
-over-convicting a real photo. The detector is tuned for restraint — on the
+over-convicting a real photo. The detector is tuned for restraint - on the
 included samples a genuine photo or a plain digital graphic is not flagged as
-synthetic — but this is a measured result on a small set, not a guarantee.
+synthetic - but this is a measured result on a small set, not a guarantee.
 
 ### SupTech radar
 
@@ -113,7 +113,7 @@ screens are available:
 5. Open the SupTech radar to see the new verification events and any linked
    campaign.
 
-The seed endpoint also generates a full demo set — an original image, a
+The seed endpoint also generates a full demo set - an original image, a
 recompressed copy, an altered image/PDF with a replaced payment QR, a genuine
 video and a voice-cloned one, and a signed audio advisory with a recompressed
 copy. These are returned as base64 values from `POST /api/seed` for deterministic API
@@ -121,14 +121,14 @@ and one-click UI demonstrations.
 
 ## How evaluators can test it (with your own data)
 
-The system is fully functional — nothing is mocked except the login. You can
+The system is fully functional - nothing is mocked except the login. You can
 test every path with your own files. Start on **/issuer**, click **initialise
 demo registry** once, then:
 
 **1. Prove your own communication is genuine (the core idea)**
 
-1. On **/issuer** (Issuer role), type any title and message — or upload your own
-   image / PDF / video / audio — and click **sign & register**.
+1. On **/issuer** (Issuer role), type any title and message - or upload your own
+   image / PDF / video / audio - and click **sign & register**.
 2. Click **verify a copy** (or go to **/verify** and submit the same content).
    → Verdict: **Verified Original**, with the full cryptographic trust chain
    (issuer identity, SHA-256, Ed25519 signature, transparency-log integrity).
@@ -161,14 +161,14 @@ demo registry** once, then:
   pack**.
 
 Honest note: an **unsigned** genuine document correctly returns **Unverified**
-(we never fabricate provenance) — to test the provenance path on your own file,
+(we never fabricate provenance) - to test the provenance path on your own file,
 sign it on **/issuer** first, then verify it.
 
-**6. Verify a signature yourself — don't trust our server**
+**6. Verify a signature yourself - don't trust our server**
 
 Because the promise is *proof*, you can check it independently. On any signing
 receipt, click **download proof bundle** (manifest + Ed25519 signature + the
-issuer's public key + the content), then run the standalone verifier — which
+issuer's public key + the content), then run the standalone verifier - which
 imports nothing from PramaanSetu and never calls the backend:
 
 ```bash
@@ -178,7 +178,7 @@ npm run verify:record -- path/to/pramaansetu-proof-<id>.json
 It recomputes the SHA-256 content hash and verifies the Ed25519 signature with
 only Node's built-in crypto, printing **GENUINE** or **NOT VERIFIED** (and exits
 non-zero on failure). Change one character of the content in the bundle and it
-fails the hash check — proving the verdict isn't something this backend can fake.
+fails the hash check - proving the verdict isn't something this backend can fake.
 Every issuer's public key is also served at `GET /api/issuers/:id/key`.
 
 ## Architecture
@@ -222,7 +222,7 @@ The deterministic path runs before the AI path. A matching registry record is
 not enough by itself: its Ed25519 signature must also validate before the
 content can be reported as genuine (otherwise it becomes `invalid_provenance`).
 Only when there is no provenance match at all does the media reach the
-synthetic-media detector and the phishing-risk engine — AI is the catch-net,
+synthetic-media detector and the phishing-risk engine - AI is the catch-net,
 never the proof.
 
 ## Verification decisions
@@ -251,7 +251,7 @@ that is a measured result on a small synthetic set, not a general guarantee.
 When no signed record matches at all, an `unverified` image, video, or audio
 file additionally receives a **synthetic-media assessment** (a 0–100 score with
 a `likely-authentic` / `uncertain` / `likely-synthetic` label). `unverified`
-still never means "fake" on its own — the synthetic score is a separate
+still never means "fake" on its own - the synthetic score is a separate
 detection signal shown alongside the phishing risk.
 
 ## Evaluation
@@ -302,13 +302,13 @@ Latest local run (12 signed circulars, AI disabled):
 | False match on unrelated images | 0% |
 
 **Honest read:** the block-average fingerprint is robust to the most common
-real-world forwards — re-compression, screenshots, scaling, and small crops —
+real-world forwards - re-compression, screenshots, scaling, and small crops -
 and produces no false matches. Crop tolerance comes from storing a few
 centre-crop fingerprint variants on the *signing* side, so the probe path and
 its strict changed-cell thresholds are unchanged (the false-match rate stays
 0%). Rotation is the remaining gap: block-average hashing is not
 rotation-invariant, so a rotation variant lands in the "altered" band rather
-than matching cleanly — augmenting it would raise a false tamper alarm, so a
+than matching cleanly - augmenting it would raise a false tamper alarm, so a
 tilted forward is deliberately left as an honest "unverified". Production would
 add feature/keypoint-based matching (e.g. ORB) for rotation. This is a
 synthetic-content benchmark; a held-out set from real WhatsApp/Telegram
@@ -327,9 +327,9 @@ npm run benchmark:detection -- --ai    # vision model + forensics
 ```
 
 The decision point is the product's real operating threshold (a synthetic score
-of 34 — the boundary below which content is cleared as *likely-authentic*).
+of 34 - the boundary below which content is cleared as *likely-authentic*).
 
-**Held-out result** (vision model + forensics) — measured on a held-out set of
+**Held-out result** (vision model + forensics) - measured on a held-out set of
 **10 real AI-generated (diffusion) images vs 20 real photographs** (n = 30). This
 is the number the dashboard serves by default:
 
@@ -348,7 +348,7 @@ your own set by dropping images into
 `npm run dataset:fetch`) and running `npm run benchmark:detection -- --ai`.
 
 For reference, the **forensic layer alone** (no vision model) on a built-in
-illustrative proxy set scores ~87% accuracy / 100% recall / 75% specificity —
+illustrative proxy set scores ~87% accuracy / 100% recall / 75% specificity -
 weaker, which is exactly why the vision model leads and forensics corroborate.
 The value here is the **reproducible, honest measurement methodology**, not a
 single
@@ -383,7 +383,7 @@ move this to PostgreSQL + pgvector or FAISS.
 ### Messaging-app channel (Telegram)
 
 A Telegram bot (`backend/src/bot/`) lets an investor forward a suspicious
-message, image, or PDF and get the same verdict the web verifier returns —
+message, image, or PDF and get the same verdict the web verifier returns -
 meeting victims inside the app where scams actually spread. It activates when
 `TELEGRAM_BOT_TOKEN` is set (get one from @BotFather in ~30s). WhatsApp Business
 API is the same integration pattern for production.
@@ -613,12 +613,12 @@ JSON database. Production keys should be held in an HSM or KMS. The signing
 flow also needs authenticated issuer accounts, key rotation, audit access
 controls, and constant-time secret comparison.
 
-**Dependency audit.** Both dependency trees are clean —
+**Dependency audit.** Both dependency trees are clean -
 `npm --prefix backend audit --omit=dev` and `npm --prefix frontend audit` each
 report **0 vulnerabilities**. Earlier high-severity advisories (a `pdfjs-dist`
 PDF issue and `ip-address` on the backend; transitive `postcss` / `sharp` inside
-Next.js on the frontend) were cleared by targeted upgrades — `pdfjs-dist` to
-6.2.x and Next.js to 16.3.x — with no breaking changes. Re-run the audits before
+Next.js on the frontend) were cleared by targeted upgrades - `pdfjs-dist` to
+6.2.x and Next.js to 16.3.x - with no breaking changes. Re-run the audits before
 submission, as advisory feeds change over time. See [SECURITY.md](SECURITY.md).
 
 ## Deployment
@@ -654,7 +654,7 @@ The prototype proves the *idea and the mechanism*; production must prove the
 | Synthetic + realistic-transform benchmark | Held-out benchmark from real WhatsApp/Telegram forwarding and camera photos |
 | Ed25519-signed JSON manifest | Conformant C2PA manifest store |
 
-None of these change the architecture — they are well-understood swaps. The
+None of these change the architecture - they are well-understood swaps. The
 signing rail, verdict engine, campaign graph, and evidence flow stay as they are.
 
 ### Already built (beyond the original plan)

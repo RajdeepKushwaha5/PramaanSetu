@@ -4,7 +4,7 @@ export type SyntheticModality = "image" | "video" | "audio";
 
 export type SyntheticLabel =
   | "likely-authentic" // no strong synthetic indicators
-  | "uncertain" // mixed / weak indicators — treat with caution
+  | "uncertain" // mixed / weak indicators - treat with caution
   | "likely-synthetic"; // strong AI-generation / deepfake indicators
 
 export type SignalSource = "ai" | "forensic";

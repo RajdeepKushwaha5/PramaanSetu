@@ -1,13 +1,13 @@
 /**
  * Labelled corpus for detection-performance evaluation.
  *
- * Priority 1 — a REAL held-out set: drop images into
+ * Priority 1 - a REAL held-out set: drop images into
  *   backend/datasets/detection/authentic/   (real photographs / scans)
  *   backend/datasets/detection/synthetic/   (real AI-generated / deepfake images)
  * and the evaluation reports real numbers. This is what to use for the
  * submission figure.
  *
- * Priority 2 — a built-in ILLUSTRATIVE set (used when the folders are absent),
+ * Priority 2 - a built-in ILLUSTRATIVE set (used when the folders are absent),
  * so the harness always runs. It deliberately includes hard cases (a smooth
  * authentic image, a noised synthetic image) so the metrics are realistic
  * rather than a suspicious 100%. It is clearly labelled "illustrative"; it is

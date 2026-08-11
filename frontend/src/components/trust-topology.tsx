@@ -3,8 +3,8 @@
 /**
  * Interactive trust-topology diagram for the homepage hero.
  *
- * It plays a guided scenario — a forged SEBI circular with a swapped payment QR
- * travelling through the whole rail — and flips the diagram through live states
+ * It plays a guided scenario - a forged SEBI circular with a swapped payment QR
+ * travelling through the whole rail - and flips the diagram through live states
  * (intake → engine → source matched → tamper detected → do not pay → evidence →
  * campaign linked). The viewer can play/pause, step, or click a node to open its
  * surface. This is the 5-minute-pitch centrepiece: it tells the product story
@@ -95,7 +95,7 @@ const BEATS: Beat[] = [
   {
     chip: "TAMPER DETECTED",
     tone: "alert",
-    caption: "Frames match the genuine record — but the payment QR points to an unapproved payee.",
+    caption: "Frames match the genuine record - but the payment QR points to an unapproved payee.",
     nodes: [],
     alert: ["verifier"],
     pathId: "core-verifier",
@@ -105,7 +105,7 @@ const BEATS: Beat[] = [
   {
     chip: "DO NOT PAY",
     tone: "alert",
-    caption: "The investor is warned before paying — with the fraud UPI handle named explicitly.",
+    caption: "The investor is warned before paying - with the fraud UPI handle named explicitly.",
     nodes: [],
     alert: ["investor"],
     pathId: "verifier-investor",
@@ -146,7 +146,7 @@ export function TrustTopology() {
   const current = BEATS[beat];
 
   // Drive the travelling token with a single React-controlled position (one
-  // token, explicit interpolation along the path) — no SMIL, so old and new
+  // token, explicit interpolation along the path) - no SMIL, so old and new
   // states can never render together. Honours reduced-motion by jumping to the
   // path end instead of animating.
   useEffect(() => {

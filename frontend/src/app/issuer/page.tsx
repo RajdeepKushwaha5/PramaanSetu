@@ -65,7 +65,7 @@ export default function IssuerPage() {
   function pickFile(f: File | null) {
     setError(null);
     if (f && f.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB.`);
+      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB - the limit is ${MAX_UPLOAD_MB} MB.`);
       return;
     }
     setFile(f);
@@ -86,7 +86,7 @@ export default function IssuerPage() {
           : { encoding: "base64", value: signedPayload.content };
       const bundle = {
         format: "pramaansetu-proof-bundle/1.0",
-        note: "Independently verifiable offline: `npm run verify:record -- <this-file>` — no PramaanSetu server required.",
+        note: "Independently verifiable offline: `npm run verify:record -- <this-file>` - no PramaanSetu server required.",
         manifest: result.manifest,
         signature: result.signature,
         signatureAlgorithm: "Ed25519",
@@ -422,7 +422,7 @@ function SigningReceipt({ result, selected, revoked, onRevoke, onVerifyCopy, onD
       </div>
       <dl>
         <ReceiptRow label="asset id" value={result.assetId} />
-        <ReceiptRow label="issuer" value={result.manifest.issuer?.name ?? selected?.name ?? "—"} />
+        <ReceiptRow label="issuer" value={result.manifest.issuer?.name ?? selected?.name ?? "-"} />
         <ReceiptRow label="media type" value={result.mediaType.toUpperCase()} />
         <ReceiptRow label="content hash" value={result.contentHash} />
         <ReceiptRow label="ed25519 signature" value={result.signature} />

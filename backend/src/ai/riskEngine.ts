@@ -3,7 +3,7 @@
  *
  * Runs ONLY on unsigned content (content with no provenance match). Produces a
  * risk assessment for a suspected securities-market phishing / impersonation
- * message. Never labels content "safe" — the highest it can say is "low risk,
+ * message. Never labels content "safe" - the highest it can say is "low risk,
  * still unverified".
  */
 

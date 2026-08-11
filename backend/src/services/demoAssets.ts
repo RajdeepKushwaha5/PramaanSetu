@@ -69,7 +69,7 @@ async function buildCircularPdf(upiPayload: string): Promise<Buffer> {
 /**
  * A deliberately "rendered-looking" image: smooth gradients, a soft blurred
  * subject, and no sensor noise. It is UNSIGNED, so verifying it exercises the
- * synthetic-media detector — the deterministic forensics flag the flat
+ * synthetic-media detector - the deterministic forensics flag the flat
  * compression residual and over-uniform noise typical of AI-generated imagery.
  * (For a live demo, uploading a real AI face render exercises the vision model
  * too; this built-in sample makes the forensic path demoable offline.)

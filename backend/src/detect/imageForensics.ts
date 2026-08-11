@@ -16,8 +16,8 @@
  *     block. Real capture has noise that varies across the scene; diffusion/GAN
  *     output is often unnaturally smooth and uniform.
  *
- * We deliberately keep the standalone forensic verdict conservative — it biases
- * toward "uncertain" unless a cue is strong — because false-positives on a real
+ * We deliberately keep the standalone forensic verdict conservative - it biases
+ * toward "uncertain" unless a cue is strong - because false-positives on a real
  * photo would embarrass the demo.
  */
 

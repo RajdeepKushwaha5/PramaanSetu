@@ -38,7 +38,7 @@ signRouter.post("/", async (req, res) => {
   }
   const providedKey = req.header("x-issuer-key");
   if (providedKey) {
-    // A key was supplied — it MUST belong to this exact issuer.
+    // A key was supplied - it MUST belong to this exact issuer.
     if (providedKey !== issuer.apiKey) {
       res.status(401).json({ error: "Invalid issuer key for this issuer." });
       return;

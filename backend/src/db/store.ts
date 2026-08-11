@@ -193,7 +193,7 @@ class Store {
    * Confirm a specific asset's provenance is backed by an intact transparency
    * log: the whole hash chain validates AND this asset has a log entry that
    * matches its id and content hash. A genuine verdict must NOT be returned if
-   * this fails — otherwise a corrupted registry could still show "original".
+   * this fails - otherwise a corrupted registry could still show "original".
    */
   verifyAssetProvenance(asset: SignedAsset): { ok: boolean; reason: string | null } {
     const chain = this.verifyLog();

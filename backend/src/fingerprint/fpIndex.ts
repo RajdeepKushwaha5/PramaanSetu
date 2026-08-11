@@ -8,7 +8,7 @@
  * A re-compressed or lightly-altered copy shares almost all coarse bits with
  * its original, so it lands in the same buckets; unrelated images do not.
  *
- * The exact verdict is still decided by the precise changed-cell comparison —
+ * The exact verdict is still decided by the precise changed-cell comparison -
  * the index only narrows WHICH assets get compared, so verdict correctness is
  * unchanged (as long as the true match is among the candidates, which the
  * banding guarantees with high recall).

@@ -12,7 +12,7 @@ import { verifyAndFormat } from "./verifyReply.js";
 
 const WELCOME =
   "🛡️ <b>PramaanSetu Verifier</b>\n\n" +
-  "Forward me any suspicious securities-market message, image, PDF, or video and I will tell you whether it is a genuine, signed official communication — or a fake.\n\n" +
+  "Forward me any suspicious securities-market message, image, PDF, or video and I will tell you whether it is a genuine, signed official communication - or a fake.\n\n" +
   "• Paste or forward a <b>message</b>\n" +
   "• Send a <b>photo</b> (e.g. a circular or screenshot)\n" +
   "• Send a <b>PDF</b> or <b>video</b>\n\n" +

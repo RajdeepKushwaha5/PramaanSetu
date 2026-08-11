@@ -149,7 +149,7 @@ export default function VerifyPage() {
       return;
     }
     if (f.size > MAX_UPLOAD_MB * 1024 * 1024) {
-      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB — the limit is ${MAX_UPLOAD_MB} MB. Try a smaller file.`);
+      setError(`File is ${(f.size / 1024 / 1024).toFixed(1)} MB - the limit is ${MAX_UPLOAD_MB} MB. Try a smaller file.`);
       return;
     }
     setFile(f);
@@ -171,7 +171,7 @@ export default function VerifyPage() {
     try {
       const demo = await getDemo();
       const b64 = demo[s.key];
-      if (!b64) throw new Error("Demo sample unavailable — is the backend running?");
+      if (!b64) throw new Error("Demo sample unavailable - is the backend running?");
       const f = base64ToFile(b64, s.mime, s.name);
       setMode("file");
       setFile(f);
@@ -304,7 +304,7 @@ export default function VerifyPage() {
           </p>
           <p className="channel-note">
             <span className="tag blue">TELEGRAM</span>
-            The same verifier runs as a Telegram bot — forward a suspicious message,
+            The same verifier runs as a Telegram bot - forward a suspicious message,
             image, or PDF in chat and get the identical verdict, where scams actually spread.
           </p>
         </div>
@@ -406,7 +406,7 @@ export default function VerifyPage() {
             ["01", "Exact provenance", "SHA–256 lookup and Ed25519 signature validation."],
             ["02", "Forwarded-copy match", "Perceptual comparison tolerant to recompression."],
             ["03", "Tamper localisation", "QR payee and changed-region analysis."],
-            ["04", "Synthetic-media detection", "Deepfake / AI-generation check on unsigned media — vision & audio models plus deterministic forensics."],
+            ["04", "Synthetic-media detection", "Deepfake / AI-generation check on unsigned media - vision & audio models plus deterministic forensics."],
             ["05", "Unverified phishing risk", "Explainable AI signals; never called genuine."],
           ].map(([n, title, copy]) => (
             <div className="pipeline-step" key={n}>
@@ -558,7 +558,7 @@ function TrustChain({ result }: { result: VerifyResult }) {
     { label: "issuer identity", value: `${m.issuerName} · ${m.sebiRegNo}`, ok: true },
     { label: "content hash", value: `SHA–256 · ${(result.contentHash ?? "").slice(0, 16)}…`, ok: true },
     { label: "issuer signature", value: m.signatureValid ? "Ed25519 · valid" : "Ed25519 · NOT valid", ok: m.signatureValid },
-    { label: "transparency log", value: m.logIntegrityValid === false ? "INTEGRITY FAILED" : m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "—", ok: m.logIntegrityValid !== false },
+    { label: "transparency log", value: m.logIntegrityValid === false ? "INTEGRITY FAILED" : m.logSeq != null ? `entry #${m.logSeq} · ${(m.logEntryHash ?? "").slice(0, 12)}…` : "-", ok: m.logIntegrityValid !== false },
     { label: "record status", value: status, ok: status === "active" },
     { label: "evidence", value: "tamper-evident registry", ok: true },
   ];
@@ -586,7 +586,7 @@ function TrustChain({ result }: { result: VerifyResult }) {
 
 const SYNTH_LABEL: Record<Synthetic["label"], { text: string; tone: string }> = {
   "likely-synthetic": { text: "Likely AI-generated / deepfake", tone: "danger" },
-  uncertain: { text: "Uncertain — mixed indicators", tone: "caution" },
+  uncertain: { text: "Uncertain - mixed indicators", tone: "caution" },
   "likely-authentic": { text: "No strong synthetic indicators", tone: "verified" },
 };
 
@@ -609,8 +609,8 @@ function SyntheticPanel({ synthetic }: { synthetic: Synthetic }) {
           <strong>{meta.text}</strong>
           <p>{synthetic.summary}</p>
           <div className="synth-sources">
-            <span className={synthetic.aiAvailable ? "on" : "off"}>vision/audio model {synthetic.aiAvailable ? "✓" : "—"}</span>
-            <span className={synthetic.forensicAvailable ? "on" : "off"}>deterministic forensics {synthetic.forensicAvailable ? "✓" : "—"}</span>
+            <span className={synthetic.aiAvailable ? "on" : "off"}>vision/audio model {synthetic.aiAvailable ? "✓" : "-"}</span>
+            <span className={synthetic.forensicAvailable ? "on" : "off"}>deterministic forensics {synthetic.forensicAvailable ? "✓" : "-"}</span>
             {synthetic.framesAnalysed ? <span className="on">{synthetic.framesAnalysed} frames analysed</span> : null}
           </div>
         </div>
@@ -620,13 +620,13 @@ function SyntheticPanel({ synthetic }: { synthetic: Synthetic }) {
           {ai.length > 0 && (
             <div className="synth-col">
               <span className="micro-label">model indicators</span>
-              <ul>{ai.map((s, i) => <li key={`ai-${i}`}><b>{s.label}</b> — {s.detail}</li>)}</ul>
+              <ul>{ai.map((s, i) => <li key={`ai-${i}`}><b>{s.label}</b> - {s.detail}</li>)}</ul>
             </div>
           )}
           {forensic.length > 0 && (
             <div className="synth-col">
               <span className="micro-label">forensic signals</span>
-              <ul>{forensic.map((s, i) => <li key={`f-${i}`}><b>{s.label}</b> — {s.detail}</li>)}</ul>
+              <ul>{forensic.map((s, i) => <li key={`f-${i}`}><b>{s.label}</b> - {s.detail}</li>)}</ul>
             </div>
           )}
         </div>

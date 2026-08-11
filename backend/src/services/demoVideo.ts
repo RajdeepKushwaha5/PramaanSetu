@@ -6,7 +6,7 @@
  *   clonedMp4     : SAME video stream + audio B     -> Altered (audio replaced)
  *
  * The cloned video reuses the original's exact video stream (-c:v copy) so the
- * frames still match, isolating the audio replacement — exactly a dubbed /
+ * frames still match, isolating the audio replacement - exactly a dubbed /
  * voice-cloned deepfake.
  */
 
