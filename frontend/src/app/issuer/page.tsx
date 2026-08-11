@@ -57,6 +57,14 @@ export default function IssuerPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<SignResult | null>(null);
+
+  // Signing/revocation finish in a few ms; hold the busy state briefly so the
+  // step is visible on camera before the receipt appears. Presentational only.
+  const MIN_SPIN_MS = 850;
+  const holdFor = async (startedAt: number) => {
+    const remaining = MIN_SPIN_MS - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
+  };
   const [signedPayload, setSignedPayload] = useState<Handoff | null>(null);
   const [revoked, setRevoked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +126,7 @@ export default function IssuerPage() {
 
   async function revoke() {
     if (!result) return;
+    const t0 = Date.now();
     setBusy(true);
     setError(null);
     try {
@@ -130,6 +139,7 @@ export default function IssuerPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Revocation failed");
+      await holdFor(t0);
       setRevoked(true);
       setIssuerKey("");
     } catch (e) {
@@ -171,6 +181,7 @@ export default function IssuerPage() {
   }
 
   async function sign() {
+    const t0 = Date.now();
     setBusy(true);
     setError(null);
     setResult(null);
@@ -199,6 +210,7 @@ export default function IssuerPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Signing failed");
+      await holdFor(t0);
       setResult(data);
       setSignedPayload(handoff);
       setIssuerKey(""); // don't retain the signing key in memory after use

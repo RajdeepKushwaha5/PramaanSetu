@@ -134,6 +134,15 @@ export default function VerifyPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sampleBusy, setSampleBusy] = useState<string | null>(null);
+
+  // The pipeline finishes in a few ms; hold the loading state briefly so the
+  // "running verification" step is actually visible (and legible on camera)
+  // before the verdict appears. Purely presentational - it never changes a verdict.
+  const MIN_SPIN_MS = 850;
+  const holdFor = async (startedAt: number) => {
+    const remaining = MIN_SPIN_MS - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
+  };
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -168,6 +177,7 @@ export default function VerifyPage() {
   }
 
   async function runSample(s: (typeof SAMPLES)[number]) {
+    const t0 = Date.now();
     setSampleBusy(s.id);
     setError(null);
     setResult(null);
@@ -186,9 +196,11 @@ export default function VerifyPage() {
         body: JSON.stringify({ content: b64, mimeType: s.mime }),
       });
       const { ok, data } = await readResponse(response);
+      await holdFor(t0);
       if (!ok) setError((data.error as string) || "Verification failed");
       else setResult(data as unknown as VerifyResult);
     } catch (e) {
+      await holdFor(t0);
       setError((e as Error).message);
     } finally {
       setSampleBusy(null);
@@ -198,6 +210,7 @@ export default function VerifyPage() {
   // Verify content handed off from the signing rail ("verify a copy"), or a
   // shareable demo link (/verify?auto=gv) that auto-runs a sample on load.
   async function runHandoff(h: { kind: "text" | "file"; text?: string; content?: string; mimeType?: string; name?: string }) {
+    const t0 = Date.now();
     setError(null);
     setResult(null);
     setLoading(true);
@@ -220,9 +233,11 @@ export default function VerifyPage() {
         body: JSON.stringify(body),
       });
       const { ok, data } = await readResponse(response);
+      await holdFor(t0);
       if (!ok) setError((data.error as string) || "Verification failed");
       else setResult(data as unknown as VerifyResult);
     } catch (e) {
+      await holdFor(t0);
       setError((e as Error).message);
     } finally {
       setLoading(false);
@@ -259,6 +274,7 @@ export default function VerifyPage() {
   }
 
   async function submit() {
+    const t0 = Date.now();
     setLoading(true);
     setError(null);
     setResult(null);
@@ -279,9 +295,11 @@ export default function VerifyPage() {
         body: JSON.stringify(body),
       });
       const { ok, data } = await readResponse(response);
+      await holdFor(t0);
       if (!ok) setError((data.error as string) || (data.detail as string) || "Verification request failed");
       else setResult(data as unknown as VerifyResult);
     } catch (e) {
+      await holdFor(t0);
       setError((e as Error).message);
     } finally {
       setLoading(false);
